@@ -1,53 +1,73 @@
-import HelloWorld.Messages.Greet
-import HelloWorldMain.SayHello
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior, DispatcherSelector}
+import akka.stream.scaladsl.FileIO
 
-object HelloWorld:
-    enum Messages:
-        case Greet(whom: String, replyTo: ActorRef[Greeted])
-        case Greeted(whom: String, from: ActorRef[Greet])
+import java.nio.file.Paths
+import scala.collection.immutable.TreeSet
+import scala.concurrent.ExecutionContext
 
-    import Messages.*
+/*object FileAnalyzer:
+  sealed trait Command
+  case class Count(path: String, replyTo: ActorRef[Any]) extends Command
+  def apply(path: String): Behavior[Command] = Behaviors.setup { context =>
+    context.log.info(s"Analyzing $path file")
+    implicit val executionContext: ExecutionContext =
+      context.system.dispatchers.lookup(DispatcherSelector.fromConfig("my-blocking-dispatcher"))
+//    val lines = FileIO.fromPath(Paths.get(path)).
+  }
 
-    def apply(): Behavior[Greet] = Behaviors.receive { (context, message) =>
-        context.log.info("Hello {}!", message.whom)
-        message.replyTo ! Greeted(message.whom, context.self)
-        Behaviors.same
+object DirectoryAnalyzer:
+  sealed trait Command
+  case class Analyze(path: String) extends Command
+  case class Result(path: String, report: Report)
+
+  def apply(path: String): Behavior[Command] = Behaviors.setup { context =>
+
+  }
+*/
+
+class Leaderboard(
+  private val leaderboard: TreeSet[(String, Int)],
+  private val numLongestFiles: Int) {
+
+  def submit(path: String, lines: Int): Leaderboard =
+    val tempLeaderboard = leaderboard + (path -> lines)
+    if (leaderboard.size < numLongestFiles) {
+      Leaderboard(tempLeaderboard, numLongestFiles)
+    } else {
+      Leaderboard(tempLeaderboard - leaderboard.minBy(_._2), numLongestFiles)
     }
 
-object HelloWorldBot:
-    import HelloWorld.Messages.*
+  def toList: List[(String, Int)] = leaderboard.toList.sorted((a,b) => b._2 - a._2)
 
-    def apply(maxGreetings: Int): Behavior[Greeted] = bot(0, maxGreetings)
+  def merge(leaderboard: Leaderboard): Leaderboard =
+    Leaderboard((this.toList ++ leaderboard.toList).take(numLongestFiles).to(TreeSet), numLongestFiles)
+}
 
-    private def bot(greetingsCount: Int, max: Int): Behavior[Greeted] =
-        Behaviors.receive { (context, message) =>
-            if (greetingsCount < max) {
-                context.log.info(s"Greeting ${greetingsCount+1} for ${message.whom}")
-                message.from ! Greet(message.whom, context.self)
-                bot(greetingsCount + 1, max)
-            } else {
-                Behaviors.stopped
-            }
-        }
+/*object SourceAnalyzer:
+  sealed trait Command
+  case class Count(path: String) extends Command
+  case class Result(path: String, report: Report) extends Command
 
-object HelloWorldMain:
-    import HelloWorld.Messages.Greet
-    case class SayHello(name: String)
+  def apply(maxLines: Int = 1000, numIntervals: Int = 5, numLongestFiles: Int = 5): Behavior[Command] =
 
-    def apply(): Behavior[SayHello] = Behaviors.setup { context =>
-        val greeter = context.spawn(HelloWorld(), "greeter")
-        Behaviors.receiveMessage { message =>
-            val greetBot = context.spawn(HelloWorldBot(maxGreetings = 3), message.name)
-            greeter ! Greet(message.name, replyTo = greetBot)
-            Behaviors.same
-        }
+    analyzeBehavior(intervals, List[String]())
+
+  private def analyzeBehavior(counter: Map[Range, Int], leaderboard: List[String], numLongestFiles: Int): Behavior[Command] =
+    Behaviors.setup { context =>
+      Behaviors.receiveMessage {
+        case Count(path) =>
+          context.log.info(s"Start analyzing $path")
+          context.spawn(DirectoryAnalyzer(path), "directory-analyzer")
+          Behaviors.same
+
+        case Result(path, report) =>
+          Behaviors.same
+      }
     }
+*/
 
 object Main extends App:
-    import HelloWorldMain.SayHello
-    val system = ActorSystem(guardianBehavior = HelloWorldMain(), name = "hello")
+  import Report.*
+  // val system = ActorSystem(guardianBehavior = SourceAnalyzer(), name = "hello")
 
-    system ! SayHello("Kel")
-    system ! SayHello("Andru")
