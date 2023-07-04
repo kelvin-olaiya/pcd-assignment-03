@@ -27,26 +27,29 @@ object DirectoryAnalyzer:
 */
 
 object SourceAnalyzer:
+  import Leaderboard.*
   sealed trait Command
   case class Count(path: String) extends Command
   case class Result(path: String, report: Report, leaderboard: Leaderboard) extends Command
 
   def apply(maxLines: Int = 1000, numIntervals: Int = 5, numLongestFiles: Int = 5): Behavior[Command] =
-    analyzeBehavior(Report(maxLines, numIntervals), Leaderboard(TreeSet(), numLongestFiles))
+    Behaviors.setup { context => 
+      Behaviors.receiveMessage {
+        case Count(path) => 
+          context.log.info(s"Spawning directory analyzer for path $path")
+          context.spawn(DirectoryAnalyzer(path), "directory-analyzer")
+          analyzeBehavior(Report(maxLines, numIntervals), Leaderboard(numLongestFiles), path)
+      }
+    }
 
   private def analyzeBehavior(report: Report, leaderboard: Leaderboard, rootPath: String): Behavior[Command] =
     Behaviors.setup { context =>
       Behaviors.receiveMessage {
-        case Count(path) =>
-          context.log.info(s"Start analyzing $path")
-          context.spawn(DirectoryAnalyzer(path), "directory-analyzer")
-          
-
         case Result(p, r, l) =>
           if (p == rootPath) {
             Behaviors.stopped
           } else {
-            analyzeBehavior(report merge r, leaderboard merge l)
+            analyzeBehavior(report merge r, leaderboard merge l, rootPath)
           }
       }
     }
