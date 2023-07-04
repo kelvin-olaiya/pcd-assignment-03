@@ -14,15 +14,17 @@ object SourceAnalyzer:
   case class Result(path: String, report: Report) extends Command
   case class Response(leaderboard: Leaderboard) extends Command
   case class Halt() extends Command
+  private case class AdaptedAck(ack: DirectoryAnalyzer.Ack) extends Command
 
   def apply(config: SearchConfiguration, gui: GUI): Behavior[Command] =
     Behaviors.setup { context =>
+      val backendResponseMapper: ActorRef[DirectoryAnalyzer.Ack] = context.messageAdapter(rsp => AdaptedAck(rsp))
       Behaviors.receiveMessage {
         case Count(path) =>
           context.log.info(s"Spawning source analyzer for path $path")
           val guiActor = context.spawn(GUIActor(gui), "gui-actor")
           val leaderboardActor = context.spawn(LeaderboardActor(config.numLongestFile, guiActor), "leaderboard-actor")
-          context.spawn(DirectoryAnalyzer(path, config, context.self, leaderboardActor), File(path).getAbsolutePath.freshLabel("directory-analyzer"))
+          context.spawn(DirectoryAnalyzer(path, config, context.self, backendResponseMapper, leaderboardActor), File(path).getAbsolutePath.freshLabel("directory-analyzer"))
           analyzeBehavior(Report(config.maxLines, config.numIntervals), config, path, guiActor)
       }
     }
@@ -32,15 +34,15 @@ object SourceAnalyzer:
      searchConfig: SearchConfiguration,
      rootPath: String,
      guiActor: ActorRef[GUIActor.Command]
-   ): Behavior[Command] = Behaviors.receiveMessage {
-    case Result(p, r) =>
-      if (p == rootPath) {
-        guiActor ! GUIActor.UpdateReport(report merge r)
-        //Behaviors.stopped
-        Behaviors.same
-      } else {
-        analyzeBehavior(report merge r, searchConfig, rootPath, guiActor)
-      }
-    case Halt() =>
-      Behaviors.stopped
-  }
+   ): Behavior[Command] =
+    Behaviors.receiveMessage {
+      case Result(_, r) =>
+        val newReport = report merge r
+        guiActor ! GUIActor.UpdateReport(newReport)
+        analyzeBehavior(newReport, searchConfig, rootPath, guiActor)
+      case AdaptedAck(ack) =>
+        Behaviors.stopped
+      case Halt() =>
+        Behaviors.stopped
+    }
+

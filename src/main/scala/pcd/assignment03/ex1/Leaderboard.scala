@@ -29,4 +29,4 @@ object Leaderboard:
     def toList: List[(String, Int)] = leaderboard.toList.sorted((a,b) => b._2 - a._2)
 
     def merge(leaderboard: Leaderboard): Leaderboard =
-      Leaderboard((this.toList ++ leaderboard.toList).take(numLongestFiles).to(TreeSet), numLongestFiles)
+      Leaderboard((this.toList ++ leaderboard.toList).sorted((a,b) => b._2 - a._2).take(numLongestFiles).to(TreeSet), numLongestFiles)
