@@ -2,10 +2,10 @@ package pcd.assignment03.ex1
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, DispatcherSelector}
-import akka.stream.scaladsl.{FileIO, Framing}
 import pcd.assignment03.ex1.Report.*
 import pcd.assignment03.ex1.Utils.SearchConfiguration
 
+import java.beans.Beans
 import java.io.File
 import java.nio.file.{Files, Paths}
 import scala.collection.immutable.TreeSet
@@ -88,6 +88,7 @@ object SourceAnalyzer:
   case class Count(path: String) extends Command
   case class Result(path: String, report: Report, leaderboard: Leaderboard) extends Command
   case class Response(leaderboard: Leaderboard) extends Command
+  case class Halt() extends Command
 
   def apply(maxLines: Int = 1000, numIntervals: Int = 5, numLongestFiles: Int = 5): Behavior[Command] =
     Behaviors.setup { context =>
@@ -114,6 +115,8 @@ object SourceAnalyzer:
       } else {
         analyzeBehavior(report merge r, searchConfig, rootPath)
       }
+    case Halt() =>
+      Behaviors.stopped
     }
 
 object GUIActor:
@@ -130,4 +133,4 @@ object GUIActor:
 
 object Main extends App:
   // val system = ActorSystem(guardianBehavior = SourceAnalyzer(), name = "hello")
-
+  println("ciao")
