@@ -15,18 +15,18 @@ object FileAnalyzer:
   sealed trait Command
   case class Count(path: String, replyTo: ActorRef[DirectoryAnalyzer.Command]) extends Command
 
-  def apply(searchConfiguration: SearchConfiguration): Behavior[Command] = Behaviors.setup { context =>
-    Behaviors.receiveMessage {
-      case Count(path, replyTo) =>
-        val report = Report(Files.lines(File(path).toPath).count().toInt, searchConfiguration)
-        replyTo ! DirectoryAnalyzer.Result(path, report)
-        Behaviors.same
-    }
+  def apply(searchConfiguration: SearchConfiguration): Behavior[Command] = Behaviors.receiveMessage {
+    case Count(path, replyTo) =>
+      val lines = Files.lines(File(path).toPath).count().toInt
+      val report = Report(lines, searchConfiguration)
+      val leaderboard = Leaderboard(searchConfiguration.numLongestFile).submit(path, lines)
+      replyTo ! DirectoryAnalyzer.Result(path, report, leaderboard)
+      Behaviors.same
   }
 
 object DirectoryAnalyzer:
   sealed trait Command
-  case class Result(path: String, report: Report) extends Command
+  case class Result(path: String, report: Report, leaderboard: Leaderboard) extends Command
 
   def apply(
     path: String,
@@ -42,30 +42,52 @@ object DirectoryAnalyzer:
         fileAnalyzer ! FileAnalyzer.Count(f.getAbsolutePath, context.self)
       }
     }
-    directoryAnalyzer(requests.filter(_.isFile).map(_.getAbsolutePath), Report.empty(searchConfiguration), replyTo)
+    directoryAnalyzer(requests.filter(_.isFile).map(_.getAbsolutePath),
+      Report.empty(searchConfiguration),
+      Leaderboard(searchConfiguration.numLongestFile),
+      replyTo)
   }
 
   def directoryAnalyzer(
     pendingRequests: Set[String],
     report: Report,
+    leaderboard: Leaderboard,
     replyTo: ActorRef[SourceAnalyzer.Command]
   ): Behavior[Command] = Behaviors.receiveMessage {
-    case Result(p, r) =>
+    case Result(p, r, l) =>
       val pending = pendingRequests - p
       if (pending.isEmpty) {
-        replyTo ! SourceAnalyzer.Result(p, report.merge(r), ???)
+        replyTo ! SourceAnalyzer.Result(p, report merge r, leaderboard merge l)
         Behaviors.stopped
       } else {
-        directoryAnalyzer(pendingRequests - p, report.merge(r), replyTo)
+        directoryAnalyzer(pendingRequests - p, report.merge(r), leaderboard, replyTo)
       }
   }
 
+object LeaderboardActor:
+  sealed trait Command
+  case class Update(leaderboard: Leaderboard) extends Command
+  case class Request(replyTo: ActorRef[SourceAnalyzer.Command]) extends Command
+
+  def apply(numLongestFiles: Int, notifyTo: ActorRef[GUIActor.Command]): Behavior[Command] =
+    leaderboardActor(Leaderboard(numLongestFiles))
+
+  private def leaderboardActor(leaderboard: Leaderboard): Behavior[Command] =
+    Behaviors.receiveMessage {
+      case Update(l) =>
+        // TODO: notifyGUI
+        leaderboardActor(leaderboard merge l)
+      case Request(replyTo) =>
+        replyTo ! SourceAnalyzer.Response(leaderboard)
+        Behaviors.same
+    }
 
 object SourceAnalyzer:
   import Leaderboard.*
   sealed trait Command
   case class Count(path: String) extends Command
   case class Result(path: String, report: Report, leaderboard: Leaderboard) extends Command
+  case class Response(leaderboard: Leaderboard) extends Command
 
   def apply(maxLines: Int = 1000, numIntervals: Int = 5, numLongestFiles: Int = 5): Behavior[Command] =
     Behaviors.setup { context =>
@@ -73,14 +95,15 @@ object SourceAnalyzer:
         case Count(path) =>
           context.log.info(s"Spawning directory analyzer for path $path")
           val searchConfiguration = SearchConfiguration(maxLines, numIntervals, numLongestFiles)
+          val guiActor = context.spawn(GUIActor(), "gui-actor")
           context.spawn(DirectoryAnalyzer(path, searchConfiguration, context.self), "directory-analyzer")
-          analyzeBehavior(Report(maxLines, numIntervals), Leaderboard(numLongestFiles), searchConfiguration, path)
+          context.spawn(LeaderboardActor(numLongestFiles, guiActor), "leaderboard-actor")
+          analyzeBehavior(Report(maxLines, numIntervals), searchConfiguration, path)
       }
     }
 
   private def analyzeBehavior(
      report: Report,
-     leaderboard: Leaderboard,
      searchConfig: SearchConfiguration,
      rootPath: String
   ): Behavior[Command] = Behaviors.receiveMessage {
@@ -89,8 +112,20 @@ object SourceAnalyzer:
         // TODO: Statistics
         Behaviors.stopped
       } else {
-        analyzeBehavior(report merge r, leaderboard merge l, searchConfig, rootPath)
+        analyzeBehavior(report merge r, searchConfig, rootPath)
       }
+    }
+
+object GUIActor:
+  sealed trait Command
+  case class UpdateLeaderboard(leaderboard: Leaderboard) extends Command
+  case class UpdateReport(report: Report) extends Command
+
+  def apply(): Behavior[Command] = GUIActor()
+  private def GUIActor(): Behavior[Command] =
+    Behaviors.receiveMessage {
+      case UpdateLeaderboard(l) => ???
+      case UpdateReport(r) => ???
     }
 
 object Main extends App:
