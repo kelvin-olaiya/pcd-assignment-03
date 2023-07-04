@@ -1,3 +1,5 @@
+package pcd.assignment03.ex1
+
 import scala.collection.immutable.TreeSet
 
 trait Leaderboard:

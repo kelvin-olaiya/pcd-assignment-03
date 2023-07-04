@@ -1,4 +1,6 @@
-import Utils.SearchConfiguration
+package pcd.assignment03.ex1
+
+import pcd.assignment03.ex1.Utils.SearchConfiguration
 
 import java.io.File
 import java.nio.file.Files

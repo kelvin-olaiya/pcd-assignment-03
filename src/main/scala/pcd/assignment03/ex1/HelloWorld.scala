@@ -1,23 +1,21 @@
-import Utils.SearchConfiguration
+package pcd.assignment03.ex1
+
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, DispatcherSelector}
 import akka.stream.scaladsl.{FileIO, Framing}
+import pcd.assignment03.ex1.Report.*
+import pcd.assignment03.ex1.Utils.SearchConfiguration
 
-import java.nio.file.{Files, Paths}
 import java.io.File
+import java.nio.file.{Files, Paths}
 import scala.collection.immutable.TreeSet
 import scala.concurrent.ExecutionContext
-
-import Report.*
 
 object FileAnalyzer:
   sealed trait Command
   case class Count(path: String, replyTo: ActorRef[DirectoryAnalyzer.Command]) extends Command
 
   def apply(searchConfiguration: SearchConfiguration): Behavior[Command] = Behaviors.setup { context =>
-    implicit val executionContext: ExecutionContext =
-      context.system.dispatchers.lookup(DispatcherSelector.fromConfig("my-blocking-dispatcher"))
-
     Behaviors.receiveMessage {
       case Count(path, replyTo) =>
         val report = Report(Files.lines(File(path).toPath).count().toInt, searchConfiguration)
