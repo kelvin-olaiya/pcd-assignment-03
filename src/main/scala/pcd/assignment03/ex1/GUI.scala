@@ -21,7 +21,8 @@ object GUI:
   private def setSizeForText(component: JComponent): Unit = {
     component.setPreferredSize(new Dimension(100, 40))
     component.setMaximumSize(component.getPreferredSize)
-    component.setAlignmentX(Component.RIGHT_ALIGNMENT)
+    component.setMinimumSize(component.getPreferredSize)
+    component.setAlignmentX(Component.LEFT_ALIGNMENT)
   }
 
   private class NumericInputBox(prompt: String, initialValue: Int) extends Box(BoxLayout.Y_AXIS) {
@@ -32,7 +33,7 @@ object GUI:
   }
 
   private class NumericBox(label: String) extends Box(BoxLayout.Y_AXIS) {
-    val textField = new JTextField
+    private val textField = new JTextField
     add(new JLabel(label) {})
     add(textField)
     setSizeForText(textField)
