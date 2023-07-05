@@ -1,7 +1,10 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.view
 
 import akka.actor.typed.ActorSystem
-import pcd.assignment03.ex1.Utils.SearchConfiguration
+import pcd.assignment03.ex1.dynamic.Utils.SearchConfiguration
+import pcd.assignment03.ex1.dynamic.model.{Leaderboard, Report}
+import pcd.assignment03.ex1.dynamic.{Manager, View}
+import pcd.assignment03.ex1.{Leaderboard, Manager, Report, View}
 
 class CLI(system: ActorSystem[Manager.Command]) extends View:
 

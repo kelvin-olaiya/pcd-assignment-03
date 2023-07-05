@@ -1,14 +1,16 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.view
 
 import akka.actor.typed.ActorSystem
+import pcd.assignment03.ex1.*
+import pcd.assignment03.ex1.dynamic.model.{Leaderboard, Report}
+import pcd.assignment03.ex1.dynamic.{GUI, Manager, Utils, View}
 
 import java.awt.*
 import java.awt.event.ActionEvent
+import java.io.File
 import java.util
 import javax.swing.*
 import javax.swing.border.Border
-import java.io.File
-import pcd.assignment03.ex1.Manager
 
 trait GUI extends View
 

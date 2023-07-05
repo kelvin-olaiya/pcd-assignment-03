@@ -1,6 +1,8 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.model
 
-import pcd.assignment03.ex1.Utils.SearchConfiguration
+import pcd.assignment03.ex1.Report
+import pcd.assignment03.ex1.dynamic.Report
+import pcd.assignment03.ex1.dynamic.Utils.SearchConfiguration
 
 import java.io.File
 import java.nio.file.Files

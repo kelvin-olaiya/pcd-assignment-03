@@ -1,16 +1,19 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, DispatcherSelector}
-import pcd.assignment03.ex1.Report.*
-import pcd.assignment03.ex1.Utils.*
-import pcd.assignment03.ex1.GUI
+import pcd.assignment03.ex1.dynamic.Manager.manager
+import pcd.assignment03.ex1.dynamic.model.Report.*
+import pcd.assignment03.ex1.dynamic.Utils.*
+import pcd.assignment03.ex1.*
+import pcd.assignment03.ex1.dynamic.controller.SourceAnalyzer
+import pcd.assignment03.ex1.dynamic.model.LeaderboardActor
+import pcd.assignment03.ex1.dynamic.view.{CLI, GUI, View, ViewActor}
 
 import java.io.File
 import java.nio.file.{Files, Paths}
 import scala.collection.immutable.TreeSet
 import scala.concurrent.ExecutionContext
-import pcd.assignment03.ex1.Manager.manager
 
 object Manager:
   sealed trait Command
