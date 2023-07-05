@@ -4,6 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.pattern.Patterns
 import pcd.assignment03.ex1.Utils.SearchConfiguration
+import pcd.assignment03.ex1.ViewActor
 
 import java.io.File
 import scala.concurrent.Await
@@ -20,7 +21,7 @@ object SourceAnalyzer:
 
   def apply(
    config: SearchConfiguration,
-   guiActor: ActorRef[GUIActor.Command],
+   viewActor: ActorRef[ViewActor.Command],
    leaderboardActor: ActorRef[LeaderboardActor.Command],
    manager: ActorRef[Manager.Completed],
   ): Behavior[Command] =
@@ -30,7 +31,7 @@ object SourceAnalyzer:
         case Count(path) =>
           leaderboardActor ! LeaderboardActor.Init(config.numLongestFile)
           context.spawnAnonymous(DirectoryAnalyzer(path, config, context.self, ackResponseAdapter, leaderboardActor))
-          analyzeBehavior(Report(config.maxLines, config.numIntervals), config, path, guiActor, leaderboardActor, manager)
+          analyzeBehavior(Report(config.maxLines, config.numIntervals), config, path, viewActor, leaderboardActor, manager)
       }
     }
 
@@ -38,21 +39,21 @@ object SourceAnalyzer:
      report: Report,
      searchConfig: SearchConfiguration,
      rootPath: String,
-     guiActor: ActorRef[GUIActor.Command],
+     viewActor: ActorRef[ViewActor.Command],
      leaderboardActor: ActorRef[LeaderboardActor.Command],
      manager: ActorRef[Manager.Completed]
    ): Behavior[Command] =
     Behaviors.receiveMessage {
       case Result(_, r) =>
         val newReport = report merge r
-        guiActor ! GUIActor.UpdateReport(newReport)
-        analyzeBehavior(newReport, searchConfig, rootPath, guiActor, leaderboardActor, manager)
+        viewActor ! ViewActor.UpdateReport(newReport)
+        analyzeBehavior(newReport, searchConfig, rootPath, viewActor, leaderboardActor, manager)
       case AdaptedAck(_) =>
-        guiActor ! GUIActor.Stopped()
+        viewActor ! ViewActor.Stopped()
         manager ! Manager.Completed()
         Behaviors.stopped
       case Halt() =>
-        guiActor ! GUIActor.Stopped()
+        viewActor ! ViewActor.Stopped()
         Behaviors.stopped
     }
 

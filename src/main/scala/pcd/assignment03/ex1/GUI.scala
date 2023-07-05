@@ -8,15 +8,12 @@ import java.util
 import javax.swing.*
 import javax.swing.border.Border
 import java.io.File
+import pcd.assignment03.ex1.Manager
 
-trait GUI:
-  def updateReport(report: Report): Unit
-  def updateLeaderboard(leaderboard: Leaderboard): Unit
-  def stopCounting(): Unit
-
+trait GUI extends View
 
 object GUI:
-  def apply(): GUI = GUIImpl()
+  def apply(system: ActorSystem[Manager.Command]): GUI = GUIImpl(system)
   private val border = BorderFactory.createEmptyBorder(10, 20, 10, 20)
 
   private def setSizeForText(component: JComponent): Unit = {
@@ -52,9 +49,7 @@ object GUI:
   private class ListView(listModel: ListModel[String]) extends JScrollPane(new JList[String](listModel) {}) {}
 
 
-  private class GUIImpl() extends GUI {
-    val system = ActorSystem(Manager(this), "manager")
-
+  private class GUIImpl(private val system: ActorSystem[Manager.Command]) extends GUI {
     final private val frame = new JFrame("Assignment#03")
     final private val countingListModel = new DefaultListModel[String]
     final private val longestFilesModel = new DefaultListModel[String]
@@ -129,7 +124,7 @@ object GUI:
       val intervals = intervalsBox.spinner.getValue.asInstanceOf[Int]
       val longestFiles = longestFilesBox.spinner.getValue.asInstanceOf[Int]
       val searchConfiguration = Utils.SearchConfiguration(maxLines, intervals, longestFiles)
-      system ! Manager.Start(chooser.getSelectedFile.getAbsolutePath, searchConfiguration)
+      system ! Manager.Start(chooser.getSelectedFile.getAbsolutePath, searchConfiguration, this)
     })
     controlsPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10))
     controlsPanel.setAlignmentX(Component.CENTER_ALIGNMENT)
@@ -152,7 +147,7 @@ object GUI:
       })
     }
 
-    def stopCounting(): Unit = {
+    def terminated(): Unit = {
       SwingUtilities.invokeLater(() => {
         startButton.setEnabled(true)
         stopButton.setEnabled(false)

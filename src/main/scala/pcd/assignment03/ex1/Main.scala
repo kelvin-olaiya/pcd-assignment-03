@@ -14,40 +14,43 @@ import pcd.assignment03.ex1.Manager.manager
 
 object Manager:
   sealed trait Command
-  case class Start(path: String, searchConfiguration: SearchConfiguration) extends Command
+  case class Start(path: String, searchConfiguration: SearchConfiguration, view: View) extends Command
   case class Stop() extends Command
   case class Completed() extends Command
 
-  def apply(gui: GUI): Behavior[Command] = Behaviors.setup { context =>
-    val guiActor = context.spawnAnonymous(GUIActor(gui))
-    val leaderboardActor = context.spawn(LeaderboardActor(guiActor), "leaderboard-actor")
-    idle(guiActor, leaderboardActor)
+  def apply(): Behavior[Command] = Behaviors.setup { context =>
+    val viewActor = context.spawnAnonymous(ViewActor())
+    val leaderboardActor = context.spawn(LeaderboardActor(viewActor), "leaderboard-actor")
+    idle(viewActor, leaderboardActor)
   }
 
   private def idle(
-    guiActor: ActorRef[GUIActor.Command],
+    viewActor: ActorRef[ViewActor.Command],
     leaderboardActor: ActorRef[LeaderboardActor.Command]
   ): Behavior[Command] = Behaviors.setup { context =>
     Behaviors.receiveMessage {
-      case Start(p, s) =>
-        val sourceAnalyzer = context.spawn(SourceAnalyzer(s, guiActor, leaderboardActor, context.self), "source-analyzer")
+      case Start(p, s, v) =>
+        viewActor ! ViewActor.SetView(v)
+        val sourceAnalyzer = context.spawn(SourceAnalyzer(s, viewActor, leaderboardActor, context.self), "source-analyzer")
         sourceAnalyzer ! SourceAnalyzer.Count(p)
-        manager(sourceAnalyzer, guiActor, leaderboardActor)
+        manager(sourceAnalyzer, viewActor, leaderboardActor)
     }
   }
 
   private def manager(
     sourceAnalyzer: ActorRef[SourceAnalyzer.Command],
-    guiActor: ActorRef[GUIActor.Command],
+    viewActor: ActorRef[ViewActor.Command],
     leaderboardActor: ActorRef[LeaderboardActor.Command]
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case Stop() =>
         sourceAnalyzer ! SourceAnalyzer.Halt()
-        idle(guiActor, leaderboardActor)
+        idle(viewActor, leaderboardActor)
       case Completed() =>
-        idle(guiActor, leaderboardActor)
+        idle(viewActor, leaderboardActor)
     }
 
 object Main extends App:
-  GUI()
+  val system = ActorSystem(Manager(), "manager")
+  GUI(system)
+  //CLI(system)
