@@ -1,8 +1,11 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.controller
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import pcd.assignment03.ex1.Utils.SearchConfiguration
+import akka.actor.typed.{ActorRef, Behavior}
+import pcd.assignment03.ex1.dynamic.Utils.SearchConfiguration
+import pcd.assignment03.ex1.dynamic.model.{Leaderboard, Report}
+import pcd.assignment03.ex1.dynamic.DirectoryAnalyzer
+import pcd.assignment03.ex1.{DirectoryAnalyzer, Leaderboard, Report}
 
 import java.io.File
 import java.nio.file.Files

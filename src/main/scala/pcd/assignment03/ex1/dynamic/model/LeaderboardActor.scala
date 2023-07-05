@@ -1,8 +1,10 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.model
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import pcd.assignment03.ex1.ViewActor
+import akka.actor.typed.{ActorRef, Behavior}
+import pcd.assignment03.ex1.dynamic.model.Leaderboard
+import pcd.assignment03.ex1.dynamic.view.ViewActor
+import pcd.assignment03.ex1.{Leaderboard, ViewActor}
 
 object LeaderboardActor:
   sealed trait Command

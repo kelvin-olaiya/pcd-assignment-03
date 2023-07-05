@@ -1,8 +1,11 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.controller
 
-import akka.actor.typed.{ActorRef, Behavior, DispatcherSelector}
 import akka.actor.typed.scaladsl.Behaviors
-import pcd.assignment03.ex1.Utils.SearchConfiguration
+import akka.actor.typed.{ActorRef, Behavior, DispatcherSelector}
+import pcd.assignment03.ex1.*
+import pcd.assignment03.ex1.dynamic.Utils.SearchConfiguration
+import pcd.assignment03.ex1.dynamic.*
+import pcd.assignment03.ex1.dynamic.model.{Leaderboard, LeaderboardActor, Report}
 
 import java.io.File
 
@@ -18,11 +21,11 @@ object DirectoryAnalyzer:
     parent: ActorRef[DirectoryAnalyzer.Ack],
     leaderboardActor: ActorRef[LeaderboardActor.Command]
   ): Behavior[Command] = Behaviors.setup { context =>
-    val fileAnalyzer = context.spawnAnonymous(FileAnalyzer(searchConfiguration), DispatcherSelector.fromConfig("file-dispatcher"))
+    val fileAnalyzer = context.spawnAnonymous(controller.FileAnalyzer(searchConfiguration), DispatcherSelector.fromConfig("file-dispatcher"))
     var requests = Set[File]()
     try {
       requests = File(path).listFiles(f => f.isDirectory || f.isFile && f.getName.endsWith(".java")).toSet
-    } catch { case _: Exception => } //ignored    
+    } catch { case _: Exception => } //ignored
     requests.foreach { f =>
       if (f.isDirectory) {
         context.spawnAnonymous(DirectoryAnalyzer(f.getAbsolutePath, searchConfiguration, sourceAnalyzer, context.self, leaderboardActor))

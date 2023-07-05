@@ -1,17 +1,21 @@
-package pcd.assignment03.ex1
+package pcd.assignment03.ex1.dynamic.controller
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.pattern.Patterns
-import pcd.assignment03.ex1.Utils.SearchConfiguration
-import pcd.assignment03.ex1.ViewActor
+import pcd.assignment03.ex1.*
+import pcd.assignment03.ex1.dynamic.Utils.SearchConfiguration
+import pcd.assignment03.ex1.dynamic.controller.DirectoryAnalyzer
+import pcd.assignment03.ex1.dynamic.model.{Leaderboard, LeaderboardActor, Report}
+import pcd.assignment03.ex1.dynamic.view.ViewActor
+import pcd.assignment03.ex1.dynamic.{Manager, controller}
 
 import java.io.File
 import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object SourceAnalyzer:
-  import Leaderboard.*
+  import pcd.assignment03.ex1.dynamic.model.Leaderboard.*
   sealed trait Command
   case class Count(path: String) extends Command
   case class Result(path: String, report: Report) extends Command
@@ -30,7 +34,7 @@ object SourceAnalyzer:
       Behaviors.receiveMessage {
         case Count(path) =>
           leaderboardActor ! LeaderboardActor.Init(config.numLongestFile)
-          context.spawnAnonymous(DirectoryAnalyzer(path, config, context.self, ackResponseAdapter, leaderboardActor))
+          context.spawnAnonymous(controller.DirectoryAnalyzer(path, config, context.self, ackResponseAdapter, leaderboardActor))
           analyzeBehavior(Report(config.maxLines, config.numIntervals), config, path, viewActor, leaderboardActor, manager)
       }
     }
