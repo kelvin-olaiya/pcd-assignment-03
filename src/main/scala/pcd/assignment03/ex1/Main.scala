@@ -12,6 +12,7 @@ import java.nio.file.{Files, Paths}
 import scala.collection.immutable.TreeSet
 import scala.concurrent.ExecutionContext
 import Utils.freshLabel
+import pcd.assignment03.ex1.Manager.manager
 
 object Manager:
   sealed trait Command
@@ -19,19 +20,25 @@ object Manager:
   case class Stop() extends Command
 
   def apply(gui: GUI): Behavior[Command] = Behaviors.setup { context =>
-    Behaviors.receiveMessage {
-      case Start(p, s) =>
-        val sourceAnalyzer = context.spawn(SourceAnalyzer(s, gui), "source-analyzer")
-        sourceAnalyzer ! SourceAnalyzer.Count(p)
-        manager(sourceAnalyzer, gui)
-    }
+    val guiActor = context.spawnAnonymous(GUIActor(gui))
+    idle(guiActor)
   }
 
-  private def manager(sourceAnalyzer: ActorRef[SourceAnalyzer.Command], gui: GUI): Behavior[Command] = Behaviors.receiveMessage {
-    case Stop() =>
-      sourceAnalyzer ! SourceAnalyzer.Halt()
-      Manager(gui)
+  private def idle(guiActor: ActorRef[GUIActor.Command]): Behavior[Command] = Behaviors.setup { context =>
+    Behaviors.receiveMessage {
+      case Start(p, s) =>
+        val sourceAnalyzer = context.spawn(SourceAnalyzer(s, guiActor), "source-analyzer")
+        sourceAnalyzer ! SourceAnalyzer.Count(p)
+        manager(sourceAnalyzer, guiActor)
+    }
   }
+  
+  private def manager(sourceAnalyzer: ActorRef[SourceAnalyzer.Command], guiActor: ActorRef[GUIActor.Command]): Behavior[Command] = 
+    Behaviors.receiveMessage {
+      case Stop() =>
+        sourceAnalyzer ! SourceAnalyzer.Halt()
+        idle(guiActor)
+    }
 
 object Main extends App:
   GUI()

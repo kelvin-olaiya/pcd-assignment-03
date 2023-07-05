@@ -14,8 +14,9 @@ object LeaderboardActor:
   private def leaderboardActor(leaderboard: Leaderboard, notifyTo: ActorRef[GUIActor.Command]): Behavior[Command] =
     Behaviors.receiveMessage {
       case Update(l) =>
-        notifyTo ! GUIActor.UpdateLeaderboard(leaderboard merge l)
-        leaderboardActor(leaderboard merge l, notifyTo)
+        val newLeaderboard = leaderboard merge l
+        notifyTo ! GUIActor.UpdateLeaderboard(newLeaderboard)
+        leaderboardActor(newLeaderboard, notifyTo)
       case Request(replyTo) =>
         replyTo ! SourceAnalyzer.Response(leaderboard)
         Behaviors.same

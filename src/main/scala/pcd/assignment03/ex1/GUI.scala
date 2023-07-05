@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent
 import java.util
 import javax.swing.*
 import javax.swing.border.Border
+import java.io.File
 
 trait GUI:
   def updateReport(report: Report): Unit
@@ -145,7 +146,7 @@ object GUI:
     def updateLeaderboard(leaderboard: Leaderboard): Unit = {
       SwingUtilities.invokeLater(() => {
         longestFilesModel.clear()
-        longestFilesModel.addAll(toJavaCollection(leaderboard.toList.map(p => s"${p._1} with ${p._2}")))
+        longestFilesModel.addAll(toJavaCollection(leaderboard.toList.map(p => s"${File(p._1).getName} with ${p._2}")))
       })
     }
 
