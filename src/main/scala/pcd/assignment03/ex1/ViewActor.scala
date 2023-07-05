@@ -26,5 +26,6 @@ object ViewActor:
     case Stopped() =>
       view.terminated()
       Behaviors.same
+    case SetView(view) => observing(view)
   }
 

@@ -30,3 +30,8 @@ object Leaderboard:
 
     def merge(leaderboard: Leaderboard): Leaderboard =
       Leaderboard((this.toList ++ leaderboard.toList).sorted((a,b) => b._2 - a._2).take(numLongestFiles).to(TreeSet), numLongestFiles)
+
+    override def toString: String =
+      val builder = StringBuilder()
+      toList.map(l => s"${l._1} with ${l._2} lines\n").foreach(builder.append)
+      builder.toString()

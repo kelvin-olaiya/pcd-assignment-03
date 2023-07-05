@@ -35,4 +35,11 @@ object Report:
       ReportImpl(this.ranges.map(r => (r, report.filesInRange(r) + this.filesInRange(r))).toMap)
     override def rangeOf(lines: Int): Range = ranges.find(_ contains lines).getOrElse(Int.MinValue until Int.MaxValue)
     override def submit(lines: Int): Report = merge(Report(Map(rangeOf(lines) -> 1)))
+    override def toString: String =
+      val builder = StringBuilder()
+      ranges.toList
+        .sorted(_.head - _.head)
+        .map(r => s"[${r.start}; ${r.end}) => ${filesInRange(r)}\n")
+        .foreach(builder.append)
+      builder.toString()
 

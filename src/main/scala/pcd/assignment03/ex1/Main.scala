@@ -52,5 +52,8 @@ object Manager:
 
 object Main extends App:
   val system = ActorSystem(Manager(), "manager")
-  GUI(system)
-  //CLI(system)
+  println("Seleziona modalità: \n 1) CLI \n 2) GUI")
+  val mode = scala.io.StdIn.readLine()
+  mode match
+    case "1" => CLI(system)
+    case "2" => GUI(system)
