@@ -2,10 +2,12 @@ package pcd.assignment03.ex1
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.pattern.Patterns
 import pcd.assignment03.ex1.Utils.SearchConfiguration
-import Utils.freshLabel
 
 import java.io.File
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object SourceAnalyzer:
   import Leaderboard.*
@@ -18,15 +20,17 @@ object SourceAnalyzer:
 
   def apply(
    config: SearchConfiguration,
-   guiActor: ActorRef[GUIActor.Command]): Behavior[Command] =
+   guiActor: ActorRef[GUIActor.Command],
+   leaderboardActor: ActorRef[LeaderboardActor.Command],
+   manager: ActorRef[Manager.Completed],
+  ): Behavior[Command] =
     Behaviors.setup { context =>
       val ackResponseAdapter: ActorRef[DirectoryAnalyzer.Ack] = context.messageAdapter(rsp => AdaptedAck(rsp))
       Behaviors.receiveMessage {
         case Count(path) =>
-          context.log.info(s"Spawning source analyzer for path $path")
-          val leaderboardActor = context.spawn(LeaderboardActor(config.numLongestFile, guiActor), "leaderboard-actor")
-          context.spawn(DirectoryAnalyzer(path, config, context.self, ackResponseAdapter, leaderboardActor), File(path).getAbsolutePath.freshLabel("directory-analyzer"))
-          analyzeBehavior(Report(config.maxLines, config.numIntervals), config, path, guiActor)
+          leaderboardActor ! LeaderboardActor.Init(config.numLongestFile)
+          context.spawnAnonymous(DirectoryAnalyzer(path, config, context.self, ackResponseAdapter, leaderboardActor))
+          analyzeBehavior(Report(config.maxLines, config.numIntervals), config, path, guiActor, leaderboardActor, manager)
       }
     }
 
@@ -34,17 +38,21 @@ object SourceAnalyzer:
      report: Report,
      searchConfig: SearchConfiguration,
      rootPath: String,
-     guiActor: ActorRef[GUIActor.Command]
+     guiActor: ActorRef[GUIActor.Command],
+     leaderboardActor: ActorRef[LeaderboardActor.Command],
+     manager: ActorRef[Manager.Completed]
    ): Behavior[Command] =
     Behaviors.receiveMessage {
       case Result(_, r) =>
         val newReport = report merge r
         guiActor ! GUIActor.UpdateReport(newReport)
-        analyzeBehavior(newReport, searchConfig, rootPath, guiActor)
+        analyzeBehavior(newReport, searchConfig, rootPath, guiActor, leaderboardActor, manager)
       case AdaptedAck(_) =>
-        Behaviors.same
+        guiActor ! GUIActor.Stopped()
+        manager ! Manager.Completed()
+        Behaviors.stopped
       case Halt() =>
-        //Behaviors.stopped
-        Behaviors.same
+        guiActor ! GUIActor.Stopped()
+        Behaviors.stopped
     }
 

@@ -13,7 +13,10 @@ object FileAnalyzer:
 
   def apply(searchConfiguration: SearchConfiguration): Behavior[Command] = Behaviors.receiveMessage {
     case Count(path, replyTo) =>
-      val lines = Files.lines(File(path).toPath).count().toInt
+      var lines = 0
+      try {
+        lines = Files.lines(File(path).toPath).count().toInt
+      } catch { case _: Exception =>} // ignored
       val report = Report(lines, searchConfiguration)
       val leaderboard = Leaderboard(searchConfiguration.numLongestFile).submit(path, lines)
       replyTo ! DirectoryAnalyzer.Result(path, report, leaderboard)

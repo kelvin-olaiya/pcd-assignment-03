@@ -7,10 +7,14 @@ object LeaderboardActor:
   sealed trait Command
   case class Update(leaderboard: Leaderboard) extends Command
   case class Request(replyTo: ActorRef[SourceAnalyzer.Command]) extends Command
+  case class Init(numLongestFiles: Int) extends Command
 
-  def apply(numLongestFiles: Int, notifyTo: ActorRef[GUIActor.Command]): Behavior[Command] =
-    leaderboardActor(Leaderboard(numLongestFiles), notifyTo)
+  def apply(notifyTo: ActorRef[GUIActor.Command]): Behavior[Command] = idle(notifyTo)
+    
 
+  private def idle(notifyTo: ActorRef[GUIActor.Command]): Behavior[Command] = Behaviors.receiveMessage {
+    case Init(n) => leaderboardActor(Leaderboard(n), notifyTo)
+  }
   private def leaderboardActor(leaderboard: Leaderboard, notifyTo: ActorRef[GUIActor.Command]): Behavior[Command] =
     Behaviors.receiveMessage {
       case Update(l) =>
@@ -20,4 +24,5 @@ object LeaderboardActor:
       case Request(replyTo) =>
         replyTo ! SourceAnalyzer.Response(leaderboard)
         Behaviors.same
+      case Init(n) => leaderboardActor(Leaderboard(n), notifyTo)
     }

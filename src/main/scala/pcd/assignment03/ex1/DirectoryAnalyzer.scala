@@ -3,7 +3,6 @@ package pcd.assignment03.ex1
 import akka.actor.typed.{ActorRef, Behavior, DispatcherSelector}
 import akka.actor.typed.scaladsl.Behaviors
 import pcd.assignment03.ex1.Utils.SearchConfiguration
-import Utils.freshLabel
 
 import java.io.File
 
@@ -19,11 +18,14 @@ object DirectoryAnalyzer:
     parent: ActorRef[DirectoryAnalyzer.Ack],
     leaderboardActor: ActorRef[LeaderboardActor.Command]
   ): Behavior[Command] = Behaviors.setup { context =>
-    val fileAnalyzer = context.spawn(FileAnalyzer(searchConfiguration), path.freshLabel("file-analyzer"), DispatcherSelector.fromConfig("file-dispatcher"))
-    val requests = File(path).listFiles(f => f.isDirectory || f.isFile && f.getName.endsWith(".java")).toSet
+    val fileAnalyzer = context.spawnAnonymous(FileAnalyzer(searchConfiguration), DispatcherSelector.fromConfig("file-dispatcher"))
+    var requests = Set[File]()
+    try {
+      requests = File(path).listFiles(f => f.isDirectory || f.isFile && f.getName.endsWith(".java")).toSet
+    } catch { case _: Exception => } //ignored    
     requests.foreach { f =>
       if (f.isDirectory) {
-        context.spawn(DirectoryAnalyzer(f.getAbsolutePath, searchConfiguration, sourceAnalyzer, context.self, leaderboardActor), f.getAbsolutePath.freshLabel("directory-analyzer"))
+        context.spawnAnonymous(DirectoryAnalyzer(f.getAbsolutePath, searchConfiguration, sourceAnalyzer, context.self, leaderboardActor))
       } else if (f.isFile && f.getName.endsWith(".java")) {
         fileAnalyzer ! FileAnalyzer.Count(f.getAbsolutePath, context.self)
       }

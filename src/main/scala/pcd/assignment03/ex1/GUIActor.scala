@@ -5,6 +5,7 @@ import akka.actor.typed.scaladsl.Behaviors
 
 object GUIActor:
   sealed trait Command
+  case class Stopped() extends Command
   case class UpdateLeaderboard(leaderboard: Leaderboard) extends Command
   case class UpdateReport(report: Report) extends Command
 
@@ -16,6 +17,9 @@ object GUIActor:
         Behaviors.same
       case UpdateReport(r) =>
         gui.updateReport(r)
+        Behaviors.same
+      case Stopped() =>
+        gui.stopCounting()
         Behaviors.same
     }
 

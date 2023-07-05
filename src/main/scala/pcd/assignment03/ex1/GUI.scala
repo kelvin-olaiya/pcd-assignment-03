@@ -12,6 +12,7 @@ import java.io.File
 trait GUI:
   def updateReport(report: Report): Unit
   def updateLeaderboard(leaderboard: Leaderboard): Unit
+  def stopCounting(): Unit
 
 
 object GUI:
@@ -148,6 +149,13 @@ object GUI:
       SwingUtilities.invokeLater(() => {
         longestFilesModel.clear()
         longestFilesModel.addAll(toJavaCollection(leaderboard.toList.map(p => s"${File(p._1).getName} with ${p._2}")))
+      })
+    }
+
+    def stopCounting(): Unit = {
+      SwingUtilities.invokeLater(() => {
+        startButton.setEnabled(true)
+        stopButton.setEnabled(false)
       })
     }
 
