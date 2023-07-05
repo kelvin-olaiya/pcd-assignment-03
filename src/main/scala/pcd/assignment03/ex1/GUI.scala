@@ -138,7 +138,7 @@ object GUI:
     def updateReport(report: Report): Unit = {
       SwingUtilities.invokeLater(() => {
         countingListModel.clear()
-        countingListModel.addAll(toJavaCollection(report.ranges).stream.map((r: Range) => "[" + r.head + "; " + r.last + "] => " + report.filesInRange(r)).toList)
+        countingListModel.addAll(toJavaCollection(report.ranges).stream.sorted(_.head - _.head).map((r: Range) => "[" + r.head + "; " + r.last + "] => " + report.filesInRange(r)).toList)
       })
     }
 
