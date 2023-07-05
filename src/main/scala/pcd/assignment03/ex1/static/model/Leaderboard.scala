@@ -1,5 +1,6 @@
 package pcd.assignment03.ex1.static.model
 
+import java.io.File
 import scala.collection.immutable.TreeSet
 
 trait Leaderboard:
@@ -33,5 +34,5 @@ object Leaderboard:
 
     override def toString: String =
       val builder = StringBuilder()
-      toList.map(l => s"${l._1} with ${l._2} lines\n").foreach(builder.append)
+      toList.map(l => s"${File(l._1).getName} with ${l._2} lines\n").foreach(builder.append)
       builder.toString()
