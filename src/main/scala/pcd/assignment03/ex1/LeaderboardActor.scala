@@ -7,7 +7,6 @@ import pcd.assignment03.ex1.ViewActor
 object LeaderboardActor:
   sealed trait Command
   case class Update(leaderboard: Leaderboard) extends Command
-  //case class Request(replyTo: ActorRef[SourceAnalyzer.Command]) extends Command
   case class Init(numLongestFiles: Int) extends Command
 
   def apply(notifyTo: ActorRef[ViewActor.Command]): Behavior[Command] = idle(notifyTo)
@@ -22,8 +21,6 @@ object LeaderboardActor:
         val newLeaderboard = leaderboard merge l
         notifyTo ! ViewActor.UpdateLeaderboard(newLeaderboard)
         leaderboardActor(newLeaderboard, notifyTo)
-//      case Request(replyTo) =>
-//        replyTo ! SourceAnalyzer.Response(leaderboard)
-//        Behaviors.same
+
       case Init(n) => leaderboardActor(Leaderboard(n), notifyTo)
     }
