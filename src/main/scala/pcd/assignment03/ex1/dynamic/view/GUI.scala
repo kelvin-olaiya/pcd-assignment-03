@@ -3,7 +3,8 @@ package pcd.assignment03.ex1.dynamic.view
 import akka.actor.typed.ActorSystem
 import pcd.assignment03.ex1.*
 import pcd.assignment03.ex1.dynamic.model.{Leaderboard, Report}
-import pcd.assignment03.ex1.dynamic.{GUI, Manager, Utils, View}
+import pcd.assignment03.ex1.dynamic.{Manager, Utils}
+import pcd.assignment03.ex1.dynamic.view.View
 
 import java.awt.*
 import java.awt.event.ActionEvent

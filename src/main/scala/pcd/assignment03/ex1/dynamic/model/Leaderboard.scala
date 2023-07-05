@@ -1,8 +1,5 @@
 package pcd.assignment03.ex1.dynamic.model
 
-import pcd.assignment03.ex1.Leaderboard
-import pcd.assignment03.ex1.dynamic.Leaderboard
-
 import scala.collection.immutable.TreeSet
 
 trait Leaderboard:

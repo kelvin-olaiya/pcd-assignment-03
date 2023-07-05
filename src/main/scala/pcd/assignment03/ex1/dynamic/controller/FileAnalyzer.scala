@@ -4,8 +4,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import pcd.assignment03.ex1.dynamic.Utils.SearchConfiguration
 import pcd.assignment03.ex1.dynamic.model.{Leaderboard, Report}
-import pcd.assignment03.ex1.dynamic.DirectoryAnalyzer
-import pcd.assignment03.ex1.{DirectoryAnalyzer, Leaderboard, Report}
+import pcd.assignment03.ex1.dynamic.controller.DirectoryAnalyzer
 
 import java.io.File
 import java.nio.file.Files

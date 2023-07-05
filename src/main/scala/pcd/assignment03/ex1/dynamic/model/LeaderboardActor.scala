@@ -4,7 +4,6 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import pcd.assignment03.ex1.dynamic.model.Leaderboard
 import pcd.assignment03.ex1.dynamic.view.ViewActor
-import pcd.assignment03.ex1.{Leaderboard, ViewActor}
 
 object LeaderboardActor:
   sealed trait Command
