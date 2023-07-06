@@ -1,5 +1,9 @@
 package pcd.assignment03.ex2;
 
+import pcd.assignment03.ex2.events.ColorChangeListener;
+import pcd.assignment03.ex2.events.MouseMovedListener;
+import pcd.assignment03.ex2.events.PixelGridEventListener;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
