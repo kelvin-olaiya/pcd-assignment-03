@@ -1,4 +1,4 @@
-# PCD Assignment 03
+# PCD Assignment 03
 
 Componenti:
 
@@ -8,7 +8,7 @@ Componenti:
 
 ## Part 1 - Actors
 
-L'implementazione della soluzione è stata realizzata mediante il linguaggio *Scala*, in particolare la libreria Akka, con attori tipizzati e behaviors.
+L'implementazione della soluzione è stata realizzata mediante il linguaggio *Scala*, in particolare utilizzando la libreria Akka, con attori tipizzati e behaviors.
 
 ### CLI
 
@@ -18,3 +18,7 @@ La soluzione proposta per la versione CLI è ispirata alla strategia *divide et 
 - **DirectoryAnalyzer:** viene creato questa tipologia di attore *per ogni* sottocartella trovata ricorsivamente e si occupa di aggregare i risultati dei figli, per poi inviarli al padre. Inoltre, crea un *FileAnalyzer*, che processa i file presenti nella cartella corrente.
 - **FileAnalyzer:** ogni *DirectoryAnalyzer* crea un *FileAnalyzer*, al quale vengono inviati i path dei file da processare, inviando il risultato al padre.
 
+<!-- schema image -->
+![CLI schema](./docs/part-01/schema-cli.svg)
+
+### GUI
