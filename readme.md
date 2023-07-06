@@ -1,3 +1,10 @@
+<style>
+    img {
+        display: block;
+        margin: 0 auto;
+    }
+</style>
+
 # PCD Assignment 03
 
 Componenti:
@@ -18,8 +25,7 @@ La soluzione proposta per la versione CLI è ispirata alla strategia *divide et 
 - **DirectoryAnalyzer:** viene creata questa tipologia di attore *per ogni* sottocartella trovata ricorsivamente. Si occupa di aggregare i risultati dei figli, per poi inviarli al padre. Inoltre, crea un *FileAnalyzer*, che processa i file presenti nella cartella corrente.
 - **FileAnalyzer:** ogni *DirectoryAnalyzer* crea un *FileAnalyzer*, al quale vengono inviati i path dei file da processare, inviando, per ciascuno di essi, il risultato al padre.
 
-<!-- schema image -->
-![CLI schema](./docs/part-01/cli-schema.svg)
+<img src="./docs/part-01/directories-exploring.svg" alt="CLI schema"/>
 
 ### GUI
 
@@ -27,8 +33,7 @@ Nella soluzione proposta per la versione GUI, vengono utilizzati i seguenti atto
 
 - **Manager:** gestisce il boot del sistema, quindi inizializza gli altri attori e aspetta risposte da essi per poter partire o fermarsi.
 
-<!-- schema image -->
-![Manager_GUI schema](./docs/part-01/manager.svg)
+<img src="./docs/part-01/manager.svg" alt="CLI schema"/>
 
 - **ViewActor:** si occupa di aggiornare il report e la leaderboard nella GUI ogni volta che gli arriva una richiesta di quel tipo. Inoltre il *Manager*, quando inizializza il sistema, gli richiede di settare la view giusta scelta dall'utente (CLI o GUI).
 - **SourceAnalyzer:** crea il primo *DirectoryAnalyzer* passandogli il root path di partenza insieme al riferimento dell'attore stesso. Dopodichè aspetta:
@@ -38,14 +43,14 @@ Nella soluzione proposta per la versione GUI, vengono utilizzati i seguenti atto
 - **DirectoryAnalyzer:** questo attore viene creato per ogni sottocartella trovata ricorsivamente e, per ognuna di esse, crea un *FileAnalyzer* che si occupa di processare i file presenti nella cartella corrente. Ogni *DirectoryAnalyzer* aspetta i risultati dai suoi figli per poi inviarli aggregati al padre. Quando tutti hanno finito il proprio lavoro, il primo *DirectoryAnalyzer* creato invia l'ack, per notificare la terminazione del lavoro, il report finale al *SourceAnalyzer* e la leaderboard finale al *LeaderboardActor*.
 - **FileAnalyzer:** ne viene creato uno per ogni *DirectoryAnalyzer* Questo riceve, per ogni file all'interno della directory corrente, un messaggio contente il path del file da analizzare. Quando ha finito restituisce al padre il risultato.
 
-<!-- schema image -->
-![SourceAnalyzer_GUI schema](./docs/part-01/directories-exploring.svg)
+<img src="./docs/part-01/directories-exploring.svg" alt="SourceAnalyzer_GUI schema"/>
 
-- **LeaderboardActor:** ogni volta che c'è da aggiornare la leaderboard, quest'attore si occupa di fare il merge tra la leaderboard nuova e la leaderboard vecchia così da far visualizzare quella giusta e notifica al *ViewActor*.
+- **LeaderboardActor:** quest' attore ha il compito di mantenere aggiornata la leaderboard generale. Per questo attende di ricevere da i *DirectoryAnalyzer* aggiornamenti parziali per poi aggregarli. Dunque notifica il *ViewActor* dei vari aggiornamenti.
 
-<!-- schema image -->
-![Leaderboard_GUI schema](./docs/part-01/leaderboard.svg)
+<img src="./docs/part-01/leaderboard.svg" alt="Leaderboard_GUI schema"/>
 
-Schema generale GUI: 
-<!-- schema image -->
-![GUI schema](./docs/part-01/gui-schema.svg)
+### Schema d'interazione (versione con GUI): 
+
+<img src="./docs/part-01/gui-schema.svg" alt="GUI schema"/>
+
+## Part 2 - Distributed Programming with Asynchronous Message Passing
