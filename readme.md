@@ -12,11 +12,11 @@ L'implementazione della soluzione è stata realizzata mediante il linguaggio *Sc
 
 ### CLI
 
-La soluzione proposta per la versione CLI è ispirata alla strategia *divide et impera*, esplorando cartelle e sottocartelle in modo ricorsivo. Vengono utilizzati i seguenti attori:
+La soluzione proposta per la versione CLI è ispirata alla strategia *divide et impera*, esplorando la directory in modo ricorsivo. Vengono utilizzati i seguenti attori:
 
-- **Manager:** questo attore è il punto d'ingresso del sistema, che crea il primo *DirectoryAnalyzer* con il root path di partenza. Inoltre, si occupa di stampare a video il risultato finale, al momento della ricezione.
-- **DirectoryAnalyzer:** viene creato questa tipologia di attore *per ogni* sottocartella trovata ricorsivamente e si occupa di aggregare i risultati dei figli, per poi inviarli al padre. Inoltre, crea un *FileAnalyzer*, che processa i file presenti nella cartella corrente.
-- **FileAnalyzer:** ogni *DirectoryAnalyzer* crea un *FileAnalyzer*, al quale vengono inviati i path dei file da processare, inviando il risultato al padre.
+- **Manager:** questo attore è il punto d'ingresso del sistema, che crea il primo *DirectoryAnalyzer* con il root path di partenza. Inoltre, si occupa di stampare a video il risultato finale, al momento della ricezione del report finale.
+- **DirectoryAnalyzer:** viene creata questa tipologia di attore *per ogni* sottocartella trovata ricorsivamente. Si occupa di aggregare i risultati dei figli, per poi inviarli al padre. Inoltre, crea un *FileAnalyzer*, che processa i file presenti nella cartella corrente.
+- **FileAnalyzer:** ogni *DirectoryAnalyzer* crea un *FileAnalyzer*, al quale vengono inviati i path dei file da processare, inviando, per ciascuno di essi, il risultato al padre.
 
 <!-- schema image -->
 ![CLI schema](./docs/part-01/cli-schema.svg)
@@ -31,12 +31,12 @@ Nella soluzione proposta per la versione GUI, vengono utilizzati i seguenti atto
 ![Manager_GUI schema](./docs/part-01/manager.svg)
 
 - **ViewActor:** si occupa di aggiornare il report e la leaderboard nella GUI ogni volta che gli arriva una richiesta di quel tipo. Inoltre il *Manager*, quando inizializza il sistema, gli richiede di settare la view giusta scelta dall'utente (CLI o GUI).
-- **SourceAnalyzer:** crea il primo *DirectoryAnalyzer* passandogli il root path di partenza insieme al riferimento per l'ACK. Dopodichè aspetta:
+- **SourceAnalyzer:** crea il primo *DirectoryAnalyzer* passandogli il root path di partenza insieme al riferimento dell'attore stesso. Dopodichè aspetta:
     - i report, fa il merge e chiede al *ViewActor* di aggiornare;
     - l'ack per notificare la terminazione del lavoro da parte del *DirectoryAnalyzer*;
     - l'halt nel momento in cui l'utente ferma il lavoro.
-- **DirectoryAnalyzer:** questo attore viene creato per ogni sottocartella trovata ricorsivamente e, per ognuna di esse, crea un *FileAnalyzer* che si occupa di processare i file presenti nella cartella corrente. Ogni *DirectoryAnalyzer* aspetta i risultati dai suoi figli per poi effettuare un merge e mandarli al padre. Quando tutti hanno finito il proprio lavoro, il primo *DirectoryAnalyzer* creato manda l'ack, per notificare la terminazione del lavoro, e il report finale al *SourceAnalyzer* e la leaderboard finale al *LeaderboardActor*.
-- **FileAnalyzer:** viene creato per ogni *DirectoryAnalyzer* passandogli il path e il suo compito è quello di processare i file nella cartella corrente. Quando ha finito restituisce al padre i risultati.
+- **DirectoryAnalyzer:** questo attore viene creato per ogni sottocartella trovata ricorsivamente e, per ognuna di esse, crea un *FileAnalyzer* che si occupa di processare i file presenti nella cartella corrente. Ogni *DirectoryAnalyzer* aspetta i risultati dai suoi figli per poi inviarli aggregati al padre. Quando tutti hanno finito il proprio lavoro, il primo *DirectoryAnalyzer* creato invia l'ack, per notificare la terminazione del lavoro, il report finale al *SourceAnalyzer* e la leaderboard finale al *LeaderboardActor*.
+- **FileAnalyzer:** ne viene creato uno per ogni *DirectoryAnalyzer* Questo riceve, per ogni file all'interno della directory corrente, un messaggio contente il path del file da analizzare. Quando ha finito restituisce al padre il risultato.
 
 <!-- schema image -->
 ![SourceAnalyzer_GUI schema](./docs/part-01/directories-exploring.svg)
