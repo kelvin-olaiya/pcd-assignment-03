@@ -23,14 +23,29 @@ La soluzione proposta per la versione CLI è ispirata alla strategia *divide et 
 
 ### GUI
 
-Vengono utilizzati i seguenti attori:
+Nella soluzione proposta per la versione GUI, vengono utilizzati i seguenti attori:
 
-- **Manager:** gestisce il boot del sistema, quindi inizializza gli altri attori e aspetta risposte da essi per potersi fermare.
-- **ViewActor:** si occupa di aggiornare il report e la leaderboard ogni volta che gli arriva una richiesta di quel tipo. Inoltre il *Manager*, quando inizializza il sistema, gli richiede di settare la view giusta scelta dall'utente (CLI o GUI).
-- **LeaderboardActor:** ogni volta che c'è da aggiornare la leaderboard, quest'attore si occupa di fare il merge tra la leaderboard nuova e la leaderboard vecchia così da far visualizzare quella giusta e notifica al *ViewActor*.
+- **Manager:** gestisce il boot del sistema, quindi inizializza gli altri attori e aspetta risposte da essi per poter partire o fermarsi.
+
+<!-- schema image -->
+![Manager_GUI schema](./docs/part-01/manager.svg)
+
+- **ViewActor:** si occupa di aggiornare il report e la leaderboard nella GUI ogni volta che gli arriva una richiesta di quel tipo. Inoltre il *Manager*, quando inizializza il sistema, gli richiede di settare la view giusta scelta dall'utente (CLI o GUI).
 - **SourceAnalyzer:** crea il primo *DirectoryAnalyzer* passandogli il root path di partenza insieme al riferimento per l'ACK. Dopodichè aspetta:
-    - i report e si comporta come *LeaderboardActor*;
+    - i report, fa il merge e chiede al *ViewActor* di aggiornare;
     - l'ack per notificare la terminazione del lavoro da parte del *DirectoryAnalyzer*;
     - l'halt nel momento in cui l'utente ferma il lavoro.
-- **DirectoryAnalyzer:** questo attore viene creato per ogni sottocartella trovata ricorsivamente e, per ognuna di esse, crea un *FileAnalyzer* che si occupa di processare i file presenti nella cartella corrente. Ogni *DirectoryAnalyzer* aspetta i risultati dai suoi figli per poi effettuare un merge e mandarli al padre. Quando tutti hanno finito il proprio lavoro, il primo *DirectoryAnalyzer* creato manda l'ack al *SourceAnalyzer* per notificare la terminazione del lavoro.
+- **DirectoryAnalyzer:** questo attore viene creato per ogni sottocartella trovata ricorsivamente e, per ognuna di esse, crea un *FileAnalyzer* che si occupa di processare i file presenti nella cartella corrente. Ogni *DirectoryAnalyzer* aspetta i risultati dai suoi figli per poi effettuare un merge e mandarli al padre. Quando tutti hanno finito il proprio lavoro, il primo *DirectoryAnalyzer* creato manda l'ack, per notificare la terminazione del lavoro, e il report finale al *SourceAnalyzer* e la leaderboard finale al *LeaderboardActor*.
 - **FileAnalyzer:** viene creato per ogni *DirectoryAnalyzer* passandogli il path e il suo compito è quello di processare i file nella cartella corrente. Quando ha finito restituisce al padre i risultati.
+
+<!-- schema image -->
+![SourceAnalyzer_GUI schema](./docs/part-01/directories-exploring.svg)
+
+- **LeaderboardActor:** ogni volta che c'è da aggiornare la leaderboard, quest'attore si occupa di fare il merge tra la leaderboard nuova e la leaderboard vecchia così da far visualizzare quella giusta e notifica al *ViewActor*.
+
+<!-- schema image -->
+![Leaderboard_GUI schema](./docs/part-01/leaderboard.svg)
+
+Schema generale GUI: 
+<!-- schema image -->
+![GUI schema](./docs/part-01/gui-schema.svg)
