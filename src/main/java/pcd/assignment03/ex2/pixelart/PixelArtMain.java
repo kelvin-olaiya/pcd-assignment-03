@@ -11,8 +11,8 @@ public class PixelArtMain {
 
 	public static void main(String[] args) {
 		var brushManager = new BrushManager();
-		var localBrush = new BrushManager.Brush(0, 0, randomColor());
-		var fooBrush = new BrushManager.Brush(0, 0, randomColor());
+		var localBrush = new Brush(0, 0, randomColor());
+		var fooBrush = new Brush(0, 0, randomColor());
 		brushManager.addBrush(localBrush);
 		brushManager.addBrush(fooBrush);
 		PixelGrid grid = new PixelGrid(40,40);
