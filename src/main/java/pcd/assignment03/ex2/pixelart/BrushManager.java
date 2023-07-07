@@ -20,11 +20,11 @@ public class BrushManager {
         });
     }
 
-    void addBrush(final Brush brush) {
+    public void addBrush(final Brush brush) {
         brushes.add(brush);
     }
 
-    void removeBrush(final Brush brush) {
+    public void removeBrush(final Brush brush) {
         brushes.remove(brush);
     }
 }
