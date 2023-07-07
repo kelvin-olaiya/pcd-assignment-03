@@ -1,4 +1,4 @@
-package pcd.assignment03.ex2;
+package pcd.assignment03.ex2.pixelart;
 
 import java.util.Random;
 
