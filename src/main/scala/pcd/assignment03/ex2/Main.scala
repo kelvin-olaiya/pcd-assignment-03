@@ -9,6 +9,7 @@ import com.rabbitmq.client.{AMQP, Channel, ConnectionFactory, Consumer, DeliverC
 import pcd.assignment03.ex2.MapTypeAdapter
 import pcd.assignment03.ex2.pixelart.{Brush, BrushManager, PixelGrid, PixelGridView}
 
+import java.awt.event.{WindowAdapter, WindowEvent}
 import java.awt.{Color, Label, PopupMenu}
 import java.lang.reflect
 import java.util.UUID
@@ -164,10 +165,6 @@ object Main extends App:
       view.refresh()
   })
 
-  channel.basicConsume(STATE_REQUEST_QUEUE, true, (consumerTag, delivery) => {
-    publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo())
-  }, _ => {})
-
   setDeliverCallback(USER_EXIT_EXCHANGE, (consumerTag, delivery) => {
     val message = delivery.unmarshall(classOf[UserExit])
     val brush = users(message.UUID)
@@ -176,6 +173,19 @@ object Main extends App:
     view.refresh()
   })
 
+  channel.basicConsume(STATE_REQUEST_QUEUE, true, (consumerTag, delivery) => {
+    publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo())
+  }, _ => {})
+
+  val windowListener = new WindowAdapter() {
+    override def windowClosing(e: WindowEvent): Unit = {
+      publishToExchange(UserExit(localUser._1), USER_EXIT_EXCHANGE)
+      view.dispose()
+      System.exit(0)
+    }
+  }
+
+  view.addWindowListener(windowListener)
   view.display();
 
   // CONNECT to BROKER

@@ -48,6 +48,8 @@ public class PixelGridView extends JFrame {
         getContentPane().add(panel);
 		this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		hideCursor();
+
+		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
     }
     
     public void refresh(){
