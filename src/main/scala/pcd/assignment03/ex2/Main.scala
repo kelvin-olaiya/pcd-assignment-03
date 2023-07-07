@@ -28,13 +28,14 @@ object CommunicationConfig:
 
   val STATE_REQUEST_QUEUE: String = "state_request"
 
-
   Seq(
     COLOR_CHANGE_EXCHANGE,
     PIXEL_COLOR_EXCHANGE,
     MOUSE_MOVE_EXCHANGE,
     USER_EXIT_EXCHANGE,
   ).foreach(declareExchange)
+
+  declareQueue(STATE_REQUEST_QUEUE)
 
   private def declareExchange(exchangeName: String) =
     channel.exchangeDeclare(exchangeName, "fanout")
@@ -69,21 +70,19 @@ enum Message extends Serializable:
   case MouseMove(x: Int, y: Int, UUID: UUID)
   case UserExit(UUID: UUID)
   case StateRequest()
-  case StateReply(grid: PixelGrid, brushes: Map[UUID, Brush])
+  case StateReply(grid: PixelGrid, users: Map[UUID, Brush])
 
 object Main extends App:
   import CommunicationConfig.*
   import Message.*
 
   type User = (UUID, Brush)
-  val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(10000)))
-  var users = Map(localUser)
+  var users = Map[UUID, Brush]()
   var brushManager = new BrushManager()
-  brushManager.addBrush(localUser._2)
+
 
   def requestGrid(): PixelGrid =
     var grid = PixelGrid(40, 40)
-    publishToExchange(ColorChange(localUser._2.getColor, localUser._1), COLOR_CHANGE_EXCHANGE)
     val responseQueue: String = channel.queueDeclare.getQueue
     val props = BasicProperties().builder()
       .replyTo(responseQueue)
@@ -95,16 +94,24 @@ object Main extends App:
       future.complete(message)
     }, _ => {})
     try {
-      val stateToBe = future.get(5, TimeUnit.SECONDS)
-      // TODO: create and set grid
+      val result = future.get(5, TimeUnit.SECONDS)
+      grid = result.grid
+      users = result.users
     } catch {
       case _: TimeoutException => println("Timeout occurred, starting blank")
     } finally {
       channel.basicCancel(ctag)
+      channel.queueDelete(responseQueue)
     }
     grid
+  val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(10000)))
   val grid = requestGrid()
-  val view = new PixelGridView(requestGrid(), brushManager, 800, 800)
+  users = users + (localUser._1 -> localUser._2)
+  users.foreach((_, b) => brushManager.addBrush(b))
+  brushManager.addBrush(localUser._2)
+  val view = new PixelGridView(grid, brushManager, 800, 800)
+
+  publishToExchange(ColorChange(localUser._2.getColor, localUser._1), COLOR_CHANGE_EXCHANGE)
 
   // CLICK
   view.addPixelGridEventListener((x: Int, y: Int) => {
@@ -151,8 +158,9 @@ object Main extends App:
   })
 
   channel.basicConsume(STATE_REQUEST_QUEUE, true, (consumerTag, delivery) => {
-    val message = delivery.unmarshall(classOf[StateReply])
-    println(message.grid)
+    // We can also, not unmarshall (for now)
+    // val message = delivery.unmarshall(classOf[StateRequest])
+    publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo())
   }, _ => {})
 
   // TODO: USER_EXIT_EXCHANGE
