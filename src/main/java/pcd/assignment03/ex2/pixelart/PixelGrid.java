@@ -14,26 +14,26 @@ public class PixelGrid implements Serializable {
 		grid = new int[nRows][nColumns];
 	}
 
-	public void clear() {
+	public synchronized void clear() {
 		for (int i = 0; i < nRows; i++) {
 			Arrays.fill(grid[i], 0);
 		}
 	}
 	
-	public void set(final int x, final int y, final int color) {
+	public synchronized void set(final int x, final int y, final int color) {
 		grid[y][x] = color;
 	}
 	
-	public int get(int x, int y) {
+	public synchronized int get(int x, int y) {
 		return grid[y][x];
 	}
 	
-	public int getNumRows() {
+	public synchronized int getNumRows() {
 		return this.nRows;
 	}
 	
 
-	public int getNumColumns() {
+	public synchronized int getNumColumns() {
 		return this.nColumns;
 	}
 	

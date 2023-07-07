@@ -6,7 +6,7 @@ import java.util.List;
 public class BrushManager {
     private static final int BRUSH_SIZE = 10;
     private static final int STROKE_SIZE = 2;
-    private List<Brush> brushes = new java.util.ArrayList<>();
+    private List<Brush> brushes = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     void draw(final Graphics2D g) {
         brushes.forEach(brush -> {

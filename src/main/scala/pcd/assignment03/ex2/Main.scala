@@ -14,6 +14,7 @@ import java.lang.reflect
 import java.util.UUID
 import java.util.concurrent.{CompletableFuture, TimeUnit, TimeoutException}
 import javax.swing.{JButton, JFrame, JPanel, WindowConstants}
+import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 import scala.quoted.Type
 import scala.util.Random
@@ -48,7 +49,7 @@ object CommunicationConfig:
     channel.queueDeclare(queueName, false, false, false, null)
 
   val gson = GsonBuilder()
-    .registerTypeAdapter(classOf[Map[UUID, Brush]], MapTypeAdapter)
+    .registerTypeAdapter(classOf[TrieMap[UUID, Brush]], MapTypeAdapter)
     .create()
 
   def setDeliverCallback(exchangeName: String, deliverCallback: DeliverCallback): Any =
@@ -76,14 +77,14 @@ enum Message extends Serializable:
   case MouseMove(x: Int, y: Int, UUID: UUID)
   case UserExit(UUID: UUID)
   case StateRequest()
-  case StateReply(grid: PixelGrid, users: Map[UUID, Brush])
+  case StateReply(grid: PixelGrid, users: TrieMap[UUID, Brush])
 
 object Main extends App:
   import CommunicationConfig.*
   import Message.*
 
   type User = (UUID, Brush)
-  var users = Map[UUID, Brush]()
+  var users = TrieMap[UUID, Brush]()
   var brushManager = new BrushManager()
 
 
@@ -102,7 +103,7 @@ object Main extends App:
     try {
       val result = future.get(5, TimeUnit.SECONDS)
       grid = result.grid
-      users = result.users
+      users.addAll(result.users)
     } catch {
       case _: TimeoutException => println("Timeout occurred, starting blank")
     } finally {
@@ -110,9 +111,9 @@ object Main extends App:
       channel.queueDelete(responseQueue)
     }
     grid
-  val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(10000)))
+  val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(256 * 256 * 256)))
   val grid = requestGrid()
-  users = users + (localUser._1 -> localUser._2)
+  users.addOne(localUser._1 -> localUser._2)
   users.foreach((_, b) => brushManager.addBrush(b))
   brushManager.addBrush(localUser._2)
   val view = new PixelGridView(grid, brushManager, 800, 800)
@@ -148,7 +149,7 @@ object Main extends App:
     println(s" [x] Color change received $message")
     if !(users.keySet contains message.UUID) then
       val otherBrush = Brush(0, 0, message.color)
-      users = users + (message.UUID -> otherBrush)
+      users.addOne(message.UUID -> otherBrush)
       brushManager.addBrush(otherBrush)
     else
       users(message.UUID).setColor(message.color)
@@ -164,12 +165,16 @@ object Main extends App:
   })
 
   channel.basicConsume(STATE_REQUEST_QUEUE, true, (consumerTag, delivery) => {
-    // We can also, not unmarshall (for now)
-    // val message = delivery.unmarshall(classOf[StateRequest])
     publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo())
   }, _ => {})
 
-  // TODO: USER_EXIT_EXCHANGE
+  setDeliverCallback(USER_EXIT_EXCHANGE, (consumerTag, delivery) => {
+    val message = delivery.unmarshall(classOf[UserExit])
+    val brush = users(message.UUID)
+    users.remove(message.UUID)
+    brushManager.removeBrush(brush)
+    view.refresh()
+  })
 
   view.display();
 
@@ -183,30 +188,3 @@ object Main extends App:
   //  WHILE waiting BUFFER received events
   // ON grid establishment APPLY buffered events
   // REGISTER event listeners
-
-object MapTypeAdapter extends JsonSerializer[Map[UUID, Brush]] with JsonDeserializer[Map[UUID, Brush]] {
-  override def serialize(src: Map[UUID, Brush], typeOfSrc: reflect.Type, context: JsonSerializationContext): JsonElement = {
-  val jsonObject = new JsonObject()
-    for ((key, value) <- src) {
-      val jsonKey = new JsonPrimitive(key.toString)
-      val jsonValue = context.serialize(value)
-      jsonObject.add(jsonKey.getAsString, jsonValue)
-    }
-    jsonObject
-  }
-
-  override def deserialize(json: JsonElement, typeOfT: reflect.Type, context: JsonDeserializationContext): Map[UUID, Brush] = {
-    val map = new scala.collection.mutable.HashMap[UUID, Brush]()
-    val jsonObject = json.getAsJsonObject
-    val entrySet = jsonObject.entrySet()
-    val iterator = entrySet.iterator()
-    while (iterator.hasNext) {
-      val entry = iterator.next()
-      val key = UUID.fromString(entry.getKey)
-      println(entry.getValue)
-      val value = Gson().fromJson(entry.getValue, classOf[Brush])
-      map.put(key, value)
-    }
-    map.toMap
-  }
-}
