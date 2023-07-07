@@ -1,12 +1,16 @@
 package pcd.assignment03.ex2
 
-import com.google.gson.Gson
+import com.google.gson.{Gson, GsonBuilder, JsonDeserializationContext, JsonDeserializer, JsonElement, JsonObject, JsonPrimitive, JsonSerializationContext, JsonSerializer, TypeAdapter}
+import com.google.gson.reflect.TypeToken
+import com.google.gson.stream.{JsonReader, JsonWriter}
 import com.rabbitmq.client.AMQP.BasicProperties
 import com.rabbitmq.client.impl.AMQImpl.Connection
 import com.rabbitmq.client.{AMQP, Channel, ConnectionFactory, Consumer, DeliverCallback, Delivery}
+import pcd.assignment03.ex2.MapTypeAdapter
 import pcd.assignment03.ex2.pixelart.{Brush, BrushManager, PixelGrid, PixelGridView}
 
 import java.awt.{Color, Label, PopupMenu}
+import java.lang.reflect
 import java.util.UUID
 import java.util.concurrent.{CompletableFuture, TimeUnit, TimeoutException}
 import javax.swing.{JButton, JFrame, JPanel, WindowConstants}
@@ -43,7 +47,9 @@ object CommunicationConfig:
   private def declareQueue(queueName: String) =
     channel.queueDeclare(queueName, false, false, false, null)
 
-  val gson = Gson()
+  val gson = GsonBuilder()
+    .registerTypeAdapter(classOf[Map[UUID, Brush]], MapTypeAdapter)
+    .create()
 
   def setDeliverCallback(exchangeName: String, deliverCallback: DeliverCallback): Any =
     val eventQueue: String = channel.queueDeclare.getQueue
@@ -178,3 +184,29 @@ object Main extends App:
   // ON grid establishment APPLY buffered events
   // REGISTER event listeners
 
+object MapTypeAdapter extends JsonSerializer[Map[UUID, Brush]] with JsonDeserializer[Map[UUID, Brush]] {
+  override def serialize(src: Map[UUID, Brush], typeOfSrc: reflect.Type, context: JsonSerializationContext): JsonElement = {
+  val jsonObject = new JsonObject()
+    for ((key, value) <- src) {
+      val jsonKey = new JsonPrimitive(key.toString)
+      val jsonValue = context.serialize(value)
+      jsonObject.add(jsonKey.getAsString, jsonValue)
+    }
+    jsonObject
+  }
+
+  override def deserialize(json: JsonElement, typeOfT: reflect.Type, context: JsonDeserializationContext): Map[UUID, Brush] = {
+    val map = new scala.collection.mutable.HashMap[UUID, Brush]()
+    val jsonObject = json.getAsJsonObject
+    val entrySet = jsonObject.entrySet()
+    val iterator = entrySet.iterator()
+    while (iterator.hasNext) {
+      val entry = iterator.next()
+      val key = UUID.fromString(entry.getKey)
+      println(entry.getValue)
+      val value = Gson().fromJson(entry.getValue, classOf[Brush])
+      map.put(key, value)
+    }
+    map.toMap
+  }
+}
