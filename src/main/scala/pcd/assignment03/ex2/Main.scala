@@ -3,7 +3,8 @@ package pcd.assignment03.ex2
 import com.google.gson.{Gson, GsonBuilder, JsonDeserializationContext, JsonDeserializer, JsonElement, JsonObject, JsonPrimitive, JsonSerializationContext, JsonSerializer, TypeAdapter}
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.{JsonReader, JsonWriter}
-import com.rabbitmq.client.AMQP.BasicProperties
+import com.rabbitmq.client
+import com.rabbitmq.client.AMQP.{BasicProperties, Queue}
 import com.rabbitmq.client.impl.AMQImpl.Connection
 import com.rabbitmq.client.{AMQP, Channel, ConnectionFactory, Consumer, DeliverCallback, Delivery}
 import pcd.assignment03.ex2.MapTypeAdapter
@@ -21,11 +22,14 @@ import scala.quoted.Type
 import scala.util.Random
 
 object CommunicationConfig:
-  val channel: Channel =
+  val connection: client.Connection =
     val factory = ConnectionFactory()
-    factory.setHost("2.tcp.eu.ngrok.io")
-    factory.setPort(16481)
-    factory.newConnection().createChannel()
+    factory.setHost("localhost") // 2.tcp.eu.ngrok.io
+    // factory.setPort(16481)
+    factory.newConnection()
+
+  val channel: Channel =
+    connection.createChannel()
 
   val COLOR_CHANGE_EXCHANGE: String = "color_change"
   val PIXEL_COLOR_EXCHANGE: String = "pixel_color"
@@ -34,34 +38,25 @@ object CommunicationConfig:
 
   val STATE_REQUEST_QUEUE: String = "state_request"
 
-  Seq(
-    COLOR_CHANGE_EXCHANGE,
-    PIXEL_COLOR_EXCHANGE,
-    MOUSE_MOVE_EXCHANGE,
-    USER_EXIT_EXCHANGE,
-  ).foreach(declareExchange)
 
-  declareQueue(STATE_REQUEST_QUEUE)
+object CommunicationApi:
+  import Utils.*
+  import CommunicationConfig.*
 
   private def declareExchange(exchangeName: String) =
     channel.exchangeDeclare(exchangeName, "fanout")
 
-  private def declareQueue(queueName: String) =
+  def declareQueue(queueName: String): Queue.DeclareOk =
     channel.queueDeclare(queueName, false, false, false, null)
 
-  val gson = GsonBuilder()
-    .registerTypeAdapter(classOf[TrieMap[UUID, Brush]], MapTypeAdapter)
-    .create()
+  def declareAllExchanges(exchanges: Iterable[String]): Unit =
+    exchanges.foreach(declareExchange)
 
-  def setDeliverCallback(exchangeName: String, deliverCallback: DeliverCallback): Any =
+  def registerDeliveryCallback(exchangeName: String, deliverCallback: DeliverCallback): String =
     val eventQueue: String = channel.queueDeclare.getQueue
     channel.queueBind(eventQueue, exchangeName, "")
     channel.basicConsume(eventQueue, true, deliverCallback, _ => {})
-
-  extension (delivery: Delivery) {
-    private def asString = String(delivery.getBody, "UTF-8")
-    def unmarshall[T](cls: Class[T]): T = gson.fromJson(delivery.asString, cls)
-  }
+    eventQueue
 
   def publishToExchange(message: Message, exchangeName: String): Unit =
     val marshalled = gson.toJson(message)
@@ -71,6 +66,19 @@ object CommunicationConfig:
     val marshalled = gson.toJson(message)
     channel.basicPublish("", queueName, props, marshalled.getBytes("UTF-8"))
 
+object Utils:
+  import CommunicationConfig.*
+  import CommunicationApi.*
+  import Message.*
+
+  val gson: Gson = GsonBuilder()
+    .registerTypeAdapter(classOf[TrieMap[UUID, Brush]], MapTypeAdapter)
+    .create()
+
+  extension (delivery: Delivery) {
+    private def asString = String(delivery.getBody, "UTF-8")
+    def unmarshall[T](cls: Class[T]): T = gson.fromJson(delivery.asString, cls)
+  }
 
 enum Message extends Serializable:
   case PixelColor(x: Int, y: Int, UUID: UUID)
@@ -82,41 +90,46 @@ enum Message extends Serializable:
 
 object Main extends App:
   import CommunicationConfig.*
+  import CommunicationApi.*
+  import Utils.*
   import Message.*
 
-  type User = (UUID, Brush)
-  var users = TrieMap[UUID, Brush]()
-  var brushManager = new BrushManager()
-
-
-  def requestGrid(): PixelGrid =
+  private def requestGrid(): PixelGrid =
     var grid = PixelGrid(40, 40)
     val responseQueue: String = channel.queueDeclare.getQueue
     val props = BasicProperties().builder()
       .replyTo(responseQueue)
       .build()
+    println("Requesting grid status")
     publishToQueue(StateRequest(), STATE_REQUEST_QUEUE, props)
     val future = CompletableFuture[StateReply]()
-    val ctag = channel.basicConsume(responseQueue, true, (consumerTag, delivery) => {
+    val cancellationTag = channel.basicConsume(responseQueue, true, (_, delivery) => {
       val message = delivery.unmarshall(classOf[StateReply])
       future.complete(message)
     }, _ => {})
+
     try {
       val result = future.get(5, TimeUnit.SECONDS)
       grid = result.grid
       users.addAll(result.users)
     } catch {
-      case _: TimeoutException => println("Timeout occurred, starting blank")
+      case _: TimeoutException => println("Timeout occurred, starting with blank grid")
     } finally {
-      channel.basicCancel(ctag)
+      channel.basicCancel(cancellationTag)
       channel.queueDelete(responseQueue)
     }
     grid
-  val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(256 * 256 * 256)))
+
+  declareAllExchanges(Seq(COLOR_CHANGE_EXCHANGE, PIXEL_COLOR_EXCHANGE, MOUSE_MOVE_EXCHANGE, USER_EXIT_EXCHANGE))
+  declareQueue(STATE_REQUEST_QUEUE)
+
+  var users = TrieMap[UUID, Brush]()
+  var brushManager = new BrushManager()
+
+  private val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(256 * 256 * 256)))
   val grid = requestGrid()
   users.addOne(localUser._1 -> localUser._2)
   users.foreach((_, b) => brushManager.addBrush(b))
-  brushManager.addBrush(localUser._2)
   val view = new PixelGridView(grid, brushManager, 800, 800)
 
   publishToExchange(ColorChange(localUser._2.getColor, localUser._1), COLOR_CHANGE_EXCHANGE)
@@ -138,16 +151,16 @@ object Main extends App:
     view.refresh()
   })
 
-  setDeliverCallback(PIXEL_COLOR_EXCHANGE, (consumerTag, delivery) => {
+  private val pixelColorQueue = registerDeliveryCallback(PIXEL_COLOR_EXCHANGE, (_, delivery) => {
     val message = delivery.unmarshall(classOf[PixelColor])
-    println(s" [x] Pixel color received $message")
+    println(s" [x] Event received => $message")
     grid.set(message.x, message.y, users(message.UUID).getColor)
     view.refresh()
   })
 
-  setDeliverCallback(COLOR_CHANGE_EXCHANGE, (consumerTag, delivery) => {
+  private val colorChangeQueue = registerDeliveryCallback(COLOR_CHANGE_EXCHANGE, (_, delivery) => {
     val message = delivery.unmarshall(classOf[ColorChange])
-    println(s" [x] Color change received $message")
+    println(s" [x] Event received => $message")
     if !(users.keySet contains message.UUID) then
       val otherBrush = Brush(0, 0, message.color)
       users.addOne(message.UUID -> otherBrush)
@@ -157,15 +170,15 @@ object Main extends App:
     view.refresh()
   })
 
-  setDeliverCallback(MOUSE_MOVE_EXCHANGE, (consumerTag, delivery) => {
+  private val mouseMoveQueue = registerDeliveryCallback(MOUSE_MOVE_EXCHANGE, (_, delivery) => {
     val message = delivery.unmarshall(classOf[MouseMove])
     if (users.keySet contains message.UUID) && (message.UUID != localUser._1) then
-      println(s" [x] Mouse move received $message")
+      println(s" [x] Event received => $message")
       users(message.UUID).updatePosition(message.x, message.y)
       view.refresh()
   })
 
-  setDeliverCallback(USER_EXIT_EXCHANGE, (consumerTag, delivery) => {
+  private val userExitQueue = registerDeliveryCallback(USER_EXIT_EXCHANGE, (_, delivery) => {
     val message = delivery.unmarshall(classOf[UserExit])
     val brush = users(message.UUID)
     users.remove(message.UUID)
@@ -173,16 +186,20 @@ object Main extends App:
     view.refresh()
   })
 
-  channel.basicConsume(STATE_REQUEST_QUEUE, true, (consumerTag, delivery) => {
+  private val recvQueues = Seq(pixelColorQueue, colorChangeQueue, mouseMoveQueue, userExitQueue)
+
+  channel.basicConsume(STATE_REQUEST_QUEUE, true, (_, delivery) => {
     publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo())
   }, _ => {})
 
-  val windowListener = new WindowAdapter() {
-    override def windowClosing(e: WindowEvent): Unit = {
+  private val windowListener = new WindowAdapter() {
+    override def windowClosing(e: WindowEvent): Unit =
       publishToExchange(UserExit(localUser._1), USER_EXIT_EXCHANGE)
       view.dispose()
+      recvQueues.foreach(channel.queueDelete)
+      channel.close()
+      connection.close()
       System.exit(0)
-    }
   }
 
   view.addWindowListener(windowListener)
