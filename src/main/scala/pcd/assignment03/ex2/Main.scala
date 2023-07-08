@@ -38,7 +38,6 @@ object CommunicationConfig:
 
   val STATE_REQUEST_QUEUE: String = "state_request"
 
-
 object CommunicationApi:
   import Utils.*
   import CommunicationConfig.*
@@ -204,14 +203,3 @@ object Main extends App:
 
   view.addWindowListener(windowListener)
   view.display();
-
-  // CONNECT to BROKER
-  // CREATE/DECLARE EXCHANGES and QUEUES
-  //  - exchange events "events" --> {PixelColoring, MouseMoved, ColorChanged, UserJoined} type: fanout
-  //  - queue getState(props: replyTo) "get_state" type: direct
-  //    - queue replyTo => ad_hoc --- rpc pattern
-  // REQUEST GRID:
-  //  IF timeout occurs -> enable editing
-  //  WHILE waiting BUFFER received events
-  // ON grid establishment APPLY buffered events
-  // REGISTER event listeners
