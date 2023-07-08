@@ -21,53 +21,9 @@ import scala.reflect.ClassTag
 import scala.quoted.Type
 import scala.util.Random
 
-object CommunicationConfig:
-  val connection: client.Connection =
-    val factory = ConnectionFactory()
-    factory.setHost("localhost") // 2.tcp.eu.ngrok.io
-    // factory.setPort(16481)
-    factory.newConnection()
-
-  val channel: Channel =
-    connection.createChannel()
-
-  val COLOR_CHANGE_EXCHANGE: String = "color_change"
-  val PIXEL_COLOR_EXCHANGE: String = "pixel_color"
-  val MOUSE_MOVE_EXCHANGE: String = "mouse_move"
-  val USER_EXIT_EXCHANGE: String = "user_exit"
-
-  val STATE_REQUEST_QUEUE: String = "state_request"
-
-object CommunicationApi:
-  import Utils.*
-  import CommunicationConfig.*
-
-  private def declareExchange(exchangeName: String) =
-    channel.exchangeDeclare(exchangeName, "fanout")
-
-  def declareQueue(queueName: String): Queue.DeclareOk =
-    channel.queueDeclare(queueName, false, false, false, null)
-
-  def declareAllExchanges(exchanges: Iterable[String]): Unit =
-    exchanges.foreach(declareExchange)
-
-  def registerDeliveryCallback(exchangeName: String, deliverCallback: DeliverCallback): String =
-    val eventQueue: String = channel.queueDeclare.getQueue
-    channel.queueBind(eventQueue, exchangeName, "")
-    channel.basicConsume(eventQueue, true, deliverCallback, _ => {})
-    eventQueue
-
-  def publishToExchange(message: Message, exchangeName: String): Unit =
-    val marshalled = gson.toJson(message)
-    channel.basicPublish(exchangeName, "", null, marshalled.getBytes("UTF-8"))
-
-  def publishToQueue(message: Message, queueName: String, props: AMQP.BasicProperties = null): Unit =
-    val marshalled = gson.toJson(message)
-    channel.basicPublish("", queueName, props, marshalled.getBytes("UTF-8"))
-
 object Utils:
-  import CommunicationConfig.*
-  import CommunicationApi.*
+  import communication.CommunicationConfig.*
+  import communication.CommunicationApi.*
   import Message.*
 
   val gson: Gson = GsonBuilder()
@@ -88,8 +44,8 @@ enum Message extends Serializable:
   case StateReply(grid: PixelGrid, users: TrieMap[UUID, Brush])
 
 object Main extends App:
-  import CommunicationConfig.*
-  import CommunicationApi.*
+  import communication.CommunicationConfig.*
+  import communication.CommunicationApi.*
   import Utils.*
   import Message.*
 
