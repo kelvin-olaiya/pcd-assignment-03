@@ -68,7 +68,6 @@ object Main extends App:
 
     try {
       val result = future.get(5, TimeUnit.SECONDS)
-      Thread.sleep(40_000)
       grid = result.grid
       users.addAll(result.users)
       eventBuffer.forEach(message => grid.set(message.x, message.y, users(message.UUID).getColor))
