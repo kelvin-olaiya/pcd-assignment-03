@@ -26,7 +26,6 @@ object MapTypeAdapter extends JsonSerializer[TrieMap[UUID, Brush]] with JsonDese
     while (iterator.hasNext) {
       val entry = iterator.next()
       val key = UUID.fromString(entry.getKey)
-      println(entry.getValue)
       val value = Gson().fromJson(entry.getValue, classOf[Brush])
       map.put(key, value)
     }
