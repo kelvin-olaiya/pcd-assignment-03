@@ -19,4 +19,3 @@ object CommunicationConfig:
   val USER_EXIT_EXCHANGE: String = "user_exit"
 
   val STATE_REQUEST_QUEUE: String = "state_request"
-

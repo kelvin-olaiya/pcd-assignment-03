@@ -2,12 +2,13 @@ package pcd.assignment03.ex2.communication
 
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.{AMQP, DeliverCallback}
-import pcd.assignment03.ex2.{Message, Utils}
 import pcd.assignment03.ex2.Utils.gson
+import pcd.assignment03.ex2.{Message, Utils}
 
 object CommunicationApi:
-  import Utils.*
+
   import CommunicationConfig.*
+  import Utils.*
 
   private def declareExchange(exchangeName: String) =
     channel.exchangeDeclare(exchangeName, "fanout")
@@ -31,4 +32,3 @@ object CommunicationApi:
   def publishToQueue(message: Message, queueName: String, props: AMQP.BasicProperties = null): Unit =
     val marshalled = gson.toJson(message)
     channel.basicPublish("", queueName, props, marshalled.getBytes("UTF-8"))
-

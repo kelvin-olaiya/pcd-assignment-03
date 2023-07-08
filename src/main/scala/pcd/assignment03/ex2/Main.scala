@@ -1,12 +1,12 @@
 package pcd.assignment03.ex2
 
-import com.google.gson.{Gson, GsonBuilder, JsonDeserializationContext, JsonDeserializer, JsonElement, JsonObject, JsonPrimitive, JsonSerializationContext, JsonSerializer, TypeAdapter}
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.{JsonReader, JsonWriter}
+import com.google.gson.*
 import com.rabbitmq.client
 import com.rabbitmq.client.AMQP.{BasicProperties, Queue}
 import com.rabbitmq.client.impl.AMQImpl.Connection
-import com.rabbitmq.client.{AMQP, Channel, ConnectionFactory, Consumer, DeliverCallback, Delivery}
+import com.rabbitmq.client.*
 import pcd.assignment03.ex2.MapTypeAdapter
 import pcd.assignment03.ex2.pixelart.{Brush, BrushManager, PixelGrid, PixelGridView}
 
@@ -17,14 +17,15 @@ import java.util.UUID
 import java.util.concurrent.{CompletableFuture, TimeUnit, TimeoutException}
 import javax.swing.{JButton, JFrame, JPanel, WindowConstants}
 import scala.collection.concurrent.TrieMap
-import scala.reflect.ClassTag
 import scala.quoted.Type
+import scala.reflect.ClassTag
 import scala.util.Random
 
 object Utils:
-  import communication.CommunicationConfig.*
-  import communication.CommunicationApi.*
+
   import Message.*
+  import communication.CommunicationApi.*
+  import communication.CommunicationConfig.*
 
   val gson: Gson = GsonBuilder()
     .registerTypeAdapter(classOf[TrieMap[UUID, Brush]], MapTypeAdapter)
@@ -44,10 +45,11 @@ enum Message extends Serializable:
   case StateReply(grid: PixelGrid, users: TrieMap[UUID, Brush])
 
 object Main extends App:
-  import communication.CommunicationConfig.*
-  import communication.CommunicationApi.*
-  import Utils.*
+
   import Message.*
+  import Utils.*
+  import communication.CommunicationApi.*
+  import communication.CommunicationConfig.*
 
   private def requestGrid(): PixelGrid =
     var grid = PixelGrid(40, 40)
@@ -81,7 +83,7 @@ object Main extends App:
   var users = TrieMap[UUID, Brush]()
   var brushManager = new BrushManager()
 
-  private val localUser = (UUID.randomUUID(), Brush(0,0, Random.nextInt(256 * 256 * 256)))
+  private val localUser = (UUID.randomUUID(), Brush(0, 0, Random.nextInt(256 * 256 * 256)))
   val grid = requestGrid()
   users.addOne(localUser._1 -> localUser._2)
   users.foreach((_, b) => brushManager.addBrush(b))
