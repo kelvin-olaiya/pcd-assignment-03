@@ -123,7 +123,9 @@ object Main extends App:
     brushManager.removeBrush(brush)
     view.refresh()
   })
+
   private val recvQueues = Seq(pixelColorQueue, colorChangeQueue, mouseMoveQueue, userExitQueue)
+
   grid = Some(requestGrid())
   users.addOne(localUser._1 -> localUser._2)
   users.foreach((_, b) => brushManager.addBrush(b))
