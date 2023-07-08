@@ -97,6 +97,7 @@ object Main extends App:
   })
   grid = Some(requestGrid())
   channel.queueDelete(eventBufferQueue)
+
   private val pixelColorQueue = registerDeliveryCallback(PIXEL_COLOR_EXCHANGE, (_, delivery) => {
     val message = delivery.unmarshall(classOf[PixelColor])
     println(s" [x] Event received => $message")

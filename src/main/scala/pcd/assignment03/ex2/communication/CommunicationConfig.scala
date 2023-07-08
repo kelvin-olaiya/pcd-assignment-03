@@ -6,10 +6,10 @@ import com.rabbitmq.client.{Channel, ConnectionFactory}
 object CommunicationConfig:
   val connection: client.Connection =
     val factory = ConnectionFactory()
-    factory.setHost("0.tcp.eu.ngrok.io") // 2.tcp.eu.ngrok.io
-    factory.setPort(16792)
-    factory.setUsername("kelvin")
-    factory.setPassword("kelvin")
+    factory.setHost("localhost") // 0.tcp.eu.ngrok.io
+    // factory.setPort(16792)
+    // factory.setUsername("guest")
+    // factory.setPassword("guest")
     factory.newConnection()
 
   val channel: Channel =
