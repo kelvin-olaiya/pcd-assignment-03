@@ -14,7 +14,7 @@ import java.awt.event.{WindowAdapter, WindowEvent}
 import java.awt.{Color, Label, PopupMenu}
 import java.lang.reflect
 import java.util.UUID
-import java.util.concurrent.{CompletableFuture, TimeUnit, TimeoutException}
+import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, CompletableFuture, LinkedBlockingQueue, TimeUnit, TimeoutException}
 import javax.swing.{JButton, JFrame, JPanel, WindowConstants}
 import scala.collection.concurrent.TrieMap
 import scala.quoted.Type
@@ -35,6 +35,8 @@ object Utils:
     private def asString = String(delivery.getBody, "UTF-8")
     def unmarshall[T](cls: Class[T]): T = gson.fromJson(delivery.asString, cls)
   }
+
+  val eventBuffer: BlockingQueue[PixelColor] = LinkedBlockingQueue[PixelColor]()
 
 enum Message extends Serializable:
   case PixelColor(x: Int, y: Int, UUID: UUID)
@@ -57,7 +59,6 @@ object Main extends App:
     val props = BasicProperties().builder()
       .replyTo(responseQueue)
       .build()
-    println("Requesting grid status")
     publishToQueue(StateRequest(), STATE_REQUEST_QUEUE, props)
     val future = CompletableFuture[StateReply]()
     val cancellationTag = channel.basicConsume(responseQueue, true, (_, delivery) => {
@@ -67,8 +68,11 @@ object Main extends App:
 
     try {
       val result = future.get(5, TimeUnit.SECONDS)
+      Thread.sleep(40_000)
       grid = result.grid
       users.addAll(result.users)
+      eventBuffer.forEach(message => grid.set(message.x, message.y, users(message.UUID).getColor))
+      eventBuffer.clear()
     } catch {
       case _: TimeoutException => println("Timeout occurred, starting with blank grid")
     } finally {
@@ -82,12 +86,48 @@ object Main extends App:
 
   var users = TrieMap[UUID, Brush]()
   var brushManager = new BrushManager()
-
   private val localUser = (UUID.randomUUID(), Brush(0, 0, Random.nextInt(256 * 256 * 256)))
-  val grid = requestGrid()
+  var grid: Option[PixelGrid] = None
+
+  private val pixelColorQueue = registerDeliveryCallback(PIXEL_COLOR_EXCHANGE, (_, delivery) => {
+    val message = delivery.unmarshall(classOf[PixelColor])
+    grid.foreach(_.set(message.x, message.y, users(message.UUID).getColor))
+    if grid.isEmpty then {
+      eventBuffer.put(message)
+    }
+    view.refresh()
+  })
+
+  private val colorChangeQueue = registerDeliveryCallback(COLOR_CHANGE_EXCHANGE, (_, delivery) => {
+    val message = delivery.unmarshall(classOf[ColorChange])
+    if !(users.keySet contains message.UUID) then
+      val otherBrush = Brush(0, 0, message.color)
+      users.addOne(message.UUID -> otherBrush)
+      brushManager.addBrush(otherBrush)
+    else
+      users(message.UUID).setColor(message.color)
+    view.refresh()
+  })
+
+  private val mouseMoveQueue = registerDeliveryCallback(MOUSE_MOVE_EXCHANGE, (_, delivery) => {
+    val message = delivery.unmarshall(classOf[MouseMove])
+    if (users.keySet contains message.UUID) && (message.UUID != localUser._1) then
+      users(message.UUID).updatePosition(message.x, message.y)
+      view.refresh()
+  })
+
+  private val userExitQueue = registerDeliveryCallback(USER_EXIT_EXCHANGE, (_, delivery) => {
+    val message = delivery.unmarshall(classOf[UserExit])
+    val brush = users(message.UUID)
+    users.remove(message.UUID)
+    brushManager.removeBrush(brush)
+    view.refresh()
+  })
+  private val recvQueues = Seq(pixelColorQueue, colorChangeQueue, mouseMoveQueue, userExitQueue)
+  grid = Some(requestGrid())
   users.addOne(localUser._1 -> localUser._2)
   users.foreach((_, b) => brushManager.addBrush(b))
-  val view = new PixelGridView(grid, brushManager, 800, 800)
+  val view = new PixelGridView(grid.get, brushManager, 800, 800)
 
   publishToExchange(ColorChange(localUser._2.getColor, localUser._1), COLOR_CHANGE_EXCHANGE)
 
@@ -108,45 +148,8 @@ object Main extends App:
     view.refresh()
   })
 
-  private val pixelColorQueue = registerDeliveryCallback(PIXEL_COLOR_EXCHANGE, (_, delivery) => {
-    val message = delivery.unmarshall(classOf[PixelColor])
-    println(s" [x] Event received => $message")
-    grid.set(message.x, message.y, users(message.UUID).getColor)
-    view.refresh()
-  })
-
-  private val colorChangeQueue = registerDeliveryCallback(COLOR_CHANGE_EXCHANGE, (_, delivery) => {
-    val message = delivery.unmarshall(classOf[ColorChange])
-    println(s" [x] Event received => $message")
-    if !(users.keySet contains message.UUID) then
-      val otherBrush = Brush(0, 0, message.color)
-      users.addOne(message.UUID -> otherBrush)
-      brushManager.addBrush(otherBrush)
-    else
-      users(message.UUID).setColor(message.color)
-    view.refresh()
-  })
-
-  private val mouseMoveQueue = registerDeliveryCallback(MOUSE_MOVE_EXCHANGE, (_, delivery) => {
-    val message = delivery.unmarshall(classOf[MouseMove])
-    if (users.keySet contains message.UUID) && (message.UUID != localUser._1) then
-      println(s" [x] Event received => $message")
-      users(message.UUID).updatePosition(message.x, message.y)
-      view.refresh()
-  })
-
-  private val userExitQueue = registerDeliveryCallback(USER_EXIT_EXCHANGE, (_, delivery) => {
-    val message = delivery.unmarshall(classOf[UserExit])
-    val brush = users(message.UUID)
-    users.remove(message.UUID)
-    brushManager.removeBrush(brush)
-    view.refresh()
-  })
-
-  private val recvQueues = Seq(pixelColorQueue, colorChangeQueue, mouseMoveQueue, userExitQueue)
-
   channel.basicConsume(STATE_REQUEST_QUEUE, true, (_, delivery) => {
-    publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo())
+    grid.foreach(grid => publishToQueue(StateReply(grid, users), delivery.getProperties().getReplyTo()))
   }, _ => {})
 
   private val windowListener = new WindowAdapter() {
