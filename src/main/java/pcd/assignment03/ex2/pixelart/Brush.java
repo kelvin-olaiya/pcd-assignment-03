@@ -1,6 +1,8 @@
 package pcd.assignment03.ex2.pixelart;
 
-public class Brush {
+import java.io.Serializable;
+
+public class Brush implements Serializable {
     private int x, y;
     private int color;
 
