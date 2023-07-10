@@ -22,29 +22,27 @@ object Client extends App:
     i <- 0 until 40
     j <- 0 until 40
   do localInstance.grid.set(i, j, status.get(i, j))
-  localInstance.others.values.foreach(localInstance.brushManager.addBrush)
+  localInstance.others.values.foreach(p => localInstance.brushManager.addBrush(p._2))
 
   localInstance.view.addMouseMovedListener((x: Int, y: Int) => {
-    localInstance.others.foreach((u, _) => u.onMouseMoved(localInstance, x, y))
+    localInstance.others.foreach((_, p) => p._1.onMouseMoved(localInstance.user.userId.toString, x, y))
     localInstance.user.brush.updatePosition(x, y)
     localInstance.view.refresh()
   })
 
   localInstance.view.addColorChangedListener(color => {
     localInstance.user.brush.setColor(color)
-    localInstance.others.foreach((u, _) => u.onUserColorChange(localInstance, color))
-    model.changeUserColor(localInstance, color)
+    localInstance.others.foreach((_, p) => p._1.onUserColorChange(localInstance.user.userId.toString, color))
+    model.changeUserColor(localInstance.user.userId.toString, color)
     localInstance.view.refresh()
   })
 
-  localInstance.view.addPixelGridEventListener((x, y) => {
-    model.colorPixel(localInstance, x, y)
-  })
+  localInstance.view.addPixelGridEventListener(model.colorPixel(localInstance.user.userId.toString, _, _))
 
   private val windowListener = new WindowAdapter() {
     override def windowClosing(e: WindowEvent): Unit =
-      model.leave(localInstance)
-      localInstance.others.foreach((u, _) => u.onUserExit(localInstance))
+      model.leave(localInstance.user.userId.toString)
+      localInstance.others.foreach((_, p) => p._1.onUserExit(localInstance.user.userId.toString))
       registry.unbind(localInstance.user.userId.toString)
       localInstance.view.dispose()
       System.exit(0)

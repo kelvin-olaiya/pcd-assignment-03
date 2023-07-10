@@ -7,11 +7,11 @@ import java.rmi.registry.{LocateRegistry, Registry}
 import scala.collection.concurrent.TrieMap
 
 trait ModelService extends Remote:
-  @throws(classOf[RemoteException]) def join(uuid: String, brush: Brush): java.util.Map[RemoteObserver, Brush]
+  @throws(classOf[RemoteException]) def join(uuid: String, brush: Brush): java.util.Map[String, (RemoteObserver, Brush)]
   @throws(classOf[RemoteException]) def getGrid: PixelGrid
-  @throws(classOf[RemoteException]) def changeUserColor(remote: RemoteObserver, color: Int): Unit
-  @throws(classOf[RemoteException]) def colorPixel(remote: RemoteObserver, x: Int, y: Int): Unit
-  @throws(classOf[RemoteException]) def leave(remote: RemoteObserver): Unit
+  @throws(classOf[RemoteException]) def changeUserColor(uuid: String, color: Int): Unit
+  @throws(classOf[RemoteException]) def colorPixel(uuid: String, x: Int, y: Int): Unit
+  @throws(classOf[RemoteException]) def leave(uuid: String): Unit
 
 object ModelService:
   private val localRegistry = LocateRegistry.getRegistry(null)
@@ -19,29 +19,29 @@ object ModelService:
   @throws(classOf[RemoteException]) def registry: Registry = localRegistry
 
   private case class ModelServiceImpl() extends ModelService:
-    val users: TrieMap[RemoteObserver, Brush] = TrieMap[RemoteObserver, Brush]()
+    val users: TrieMap[String, (RemoteObserver, Brush)] = TrieMap[String, (RemoteObserver, Brush)]()
     val grid: PixelGrid = PixelGrid(40, 40)
 
-    def join(uuid: String, brush: Brush): java.util.Map[RemoteObserver, Brush] = synchronized {
+    def join(uuid: String, brush: Brush): java.util.Map[String, (RemoteObserver, Brush)] = synchronized {
       val remote = registry.lookup(uuid).asInstanceOf[RemoteObserver]
-      users.foreach((u, _) => u.onUserJoin(remote, brush))
+      users.foreach((_, p) => p._1.onUserJoin(uuid, remote, brush))
       val copy = Map.from(users)
-      users.put(remote, brush)
+      users.put(uuid, (remote, brush))
       scala.jdk.javaapi.CollectionConverters.asJava(copy)
     }
 
     def getGrid: PixelGrid = grid
 
-    def changeUserColor(remote: RemoteObserver, color: Int): Unit = synchronized {
-      users(remote).setColor(color)
+    def changeUserColor(uuid: String, color: Int): Unit = synchronized {
+      users(uuid)._2.setColor(color)
     }
-    def colorPixel(remote: RemoteObserver, x: Int, y: Int): Unit = synchronized {
-      val color = users(remote).getColor
+    def colorPixel(uuid: String, x: Int, y: Int): Unit = synchronized {
+      val color = users(uuid)._2.getColor
       grid.set(x, y, color)
-      users.foreach((u, _) => u.onPixelColor(x, y, color))
+      users.foreach((_, p) => p._1.onPixelColor(x, y, color))
     }
 
-    def leave(remote: RemoteObserver): Unit = synchronized {
-      users.remove(remote)
+    def leave(uuid: String): Unit = synchronized {
+      users.remove(uuid)
     }
 

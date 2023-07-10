@@ -7,26 +7,26 @@ import scala.collection.concurrent.TrieMap
 class LocalInstance() extends RemoteObserver:
   val user: User = User()
   val brushManager: BrushManager = BrushManager()
-  var others: TrieMap[RemoteObserver, Brush] = TrieMap[RemoteObserver, Brush]()
+  var others: TrieMap[String, (RemoteObserver, Brush)] = TrieMap[String, (RemoteObserver, Brush)]()
   val grid: PixelGrid = PixelGrid(40, 40)
   brushManager.addBrush(user.brush)
   val view = new PixelGridView(grid, brushManager, 800, 800)
 
-  def onUserJoin(remote: RemoteObserver, brush: Brush): Unit = synchronized {
-    others.addOne(remote, brush)
+  def onUserJoin(uuid: String, remote: RemoteObserver, brush: Brush): Unit = synchronized {
+    others.addOne(uuid, (remote, brush))
     brushManager.addBrush(brush)
     println("user added")
   }
 
-  def onMouseMoved(remote: RemoteObserver, x: Int, y: Int): Unit = synchronized {
-    others(remote).updatePosition(x, y)
+  def onMouseMoved(remote: String, x: Int, y: Int): Unit = synchronized {
+    others(remote)._2.updatePosition(x, y)
     view.refresh()
     brushManager.addBrush(user.brush)
     println("remote position update")
   }
 
-  def onUserColorChange(remote: RemoteObserver, color: Int): Unit = synchronized {
-    others(remote).setColor(color)
+  def onUserColorChange(uuid: String, color: Int): Unit = synchronized {
+    others(uuid)._2.setColor(color)
     view.refresh()
     println("remote color change")
   }
@@ -36,9 +36,9 @@ class LocalInstance() extends RemoteObserver:
     view.refresh()
   }
 
-  def onUserExit(remote: RemoteObserver): Unit = synchronized {
-    val removedBrush = others.remove(remote)
-    removedBrush.foreach(brushManager.removeBrush)
+  def onUserExit(uuid: String): Unit = synchronized {
+    val removedBrush = others.remove(uuid)
+    removedBrush.foreach((_, b) => brushManager.removeBrush(b))
     view.refresh()
     println("remote brush removed")
   }
