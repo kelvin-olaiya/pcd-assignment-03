@@ -14,4 +14,3 @@ object User:
   private case class UserImpl() extends User:
     override val userId: UUID = UUID.randomUUID()
     override val brush: Brush = Brush(0, 0, Random.nextInt(256 * 256 * 256))
-

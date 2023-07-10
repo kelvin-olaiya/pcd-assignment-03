@@ -16,4 +16,3 @@ object Server extends App:
   val remoteModel = UnicastRemoteObject.exportObject(model, 0).asInstanceOf[ModelService]
   ModelService.registry.rebind("modelService", remoteModel)
   println("Server created!")
-

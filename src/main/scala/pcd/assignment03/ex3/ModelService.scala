@@ -44,4 +44,3 @@ object ModelService:
     def leave(uuid: String): Unit = synchronized {
       users.remove(uuid)
     }
-

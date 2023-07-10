@@ -50,3 +50,4 @@ object Client extends App:
 
   localInstance.view.addWindowListener(windowListener)
   localInstance.view.display()
+  
