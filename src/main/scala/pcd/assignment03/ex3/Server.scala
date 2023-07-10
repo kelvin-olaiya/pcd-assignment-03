@@ -9,10 +9,13 @@ import java.rmi.registry.{LocateRegistry, Registry}
 import java.rmi.server.UnicastRemoteObject
 import java.util.UUID
 import scala.collection.concurrent.TrieMap
+import scala.io.StdIn
 import scala.util.Random
 
 object Server extends App:
   val model = ModelService()
   val remoteModel = UnicastRemoteObject.exportObject(model, 0).asInstanceOf[ModelService]
-  ModelService.registry.rebind("modelService", remoteModel)
+  print("Session name: ")
+  val modelServiceName = StdIn.readLine()
+  ModelService.registry.rebind(modelServiceName, remoteModel)
   println("Server created!")
