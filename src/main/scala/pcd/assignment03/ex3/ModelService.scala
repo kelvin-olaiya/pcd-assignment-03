@@ -19,8 +19,8 @@ object ModelService:
   @throws(classOf[RemoteException]) def registry: Registry = localRegistry
 
   private case class ModelServiceImpl() extends ModelService:
-    val users: TrieMap[String, (RemoteObserver, Brush)] = TrieMap[String, (RemoteObserver, Brush)]()
-    val grid: PixelGrid = PixelGrid(40, 40)
+    private val users: TrieMap[String, (RemoteObserver, Brush)] = TrieMap[String, (RemoteObserver, Brush)]()
+    private val grid: PixelGrid = PixelGrid(40, 40)
 
     def join(uuid: String, brush: Brush): java.util.Map[String, (RemoteObserver, Brush)] = synchronized {
       val remote = registry.lookup(uuid).asInstanceOf[RemoteObserver]

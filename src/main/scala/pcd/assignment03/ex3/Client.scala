@@ -6,9 +6,9 @@ import java.rmi.server.UnicastRemoteObject
 import scala.collection.concurrent.TrieMap
 
 object Client extends App:
-  val localInstance = LocalInstance()
+  private val localInstance = LocalInstance()
   val registry: Registry = LocateRegistry.getRegistry(null)
-  val stub = UnicastRemoteObject.exportObject(localInstance, 0).asInstanceOf[RemoteObserver]
+  private val stub = UnicastRemoteObject.exportObject(localInstance, 0).asInstanceOf[RemoteObserver]
   registry.rebind(localInstance.user.userId.toString, stub)
   val model = registry.lookup("modelService").asInstanceOf[ModelService]
 
@@ -17,7 +17,7 @@ object Client extends App:
       model.join(localInstance.user.userId.toString, localInstance.user.brush)
     ).to(TrieMap)
 
-  val status = model.getGrid
+  private val status = model.getGrid
   for
     i <- 0 until 40
     j <- 0 until 40
