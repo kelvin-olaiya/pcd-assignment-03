@@ -79,7 +79,7 @@ messaggio relativo ad un evento su quell'exchange, tutti gli altri utenti colleg
 Inoltre, anche il client stesso riceve il proprio evento: questo garatisce uno *stato consistente* tra i vari client.
 
 <p align="center">
-    <img src="./docs/part-02/message-fanout-queues.svg" alt="GUI schema"/>
+    <img src="./docs/part-02/message-fanout-queues.svg" alt="exchanges"/>
 </p>
 
 Gli exchange, con i rispettivi tipi di messaggi, sono:
@@ -132,12 +132,10 @@ StateReply {
 }
 ```
 <p align="center">
-    <img src="./docs/part-02/get-state-rpc.svg" alt="GUI schema"/>
+    <img src="./docs/part-02/get-state-rpc.svg" alt="join and state request"/>
 </p>
 
 Dato che la richiesta dello stato non comporta lo stop dei processi, è importante per il client che è intenzionato a partecipare alla sessione, collegarsi preventivamente con le proprie code agli exchange degli eventi (in particolare **pixel_color** e **color_change**) in modo tale che, quando riceve lo stato della griglia, possa *applicare* gli eventi ricevuti e bufferizzati, evitanto di trovarsi in uno stato inconsistente.
-
-
 
 ### Riguardo la concorrenza
 
@@ -148,3 +146,45 @@ Inoltre, la classe `PixelGrid` è stata resa un *monitor*. Tutto ciò permette d
 
 
 ## Part 3 - Distributed Programming with Distributed Objects
+
+La soluzione proposta è stata implementata utilizzando Java Remote Method Invocation (`RMI`), mediante il linguaggio *Scala*.
+
+
+
+### Architettura del sistema
+
+L'architettura prevede l'interazione tra ogni *client* e il *ModelService*, ma anche un collegamento peer-to-peer tra i partecipanti.
+Il *ModelService* è l'entità che si occupa di mantenere lo stato consistente della griglia, durante una sessione di disegno.
+
+<p align="center">
+    <img src="./docs/part-03/interaction-schema.svg" alt="System architecture"/>
+</p>
+
+- `Pixel coloring`: un client, per colorare un pixel della griglia, invia un messaggio al ModelService, il quale si occuperà di propagare l'evento a tutti gli altri partecipanti. Questo meccanismo garantisce uno stato consistente tra tutti i client che concorrono alla modifica della griglia.
+
+<p align="center">
+    <img src="./docs/part-03/pixel-color.svg" alt="pixel coloring"/>
+</p>
+
+- `Brush change color & mouse move`: un client, per cambiare il colore del proprio pennello o per notificare il movimento del proprio mouse, non sfrutterà più il ModelService per fare broadcasting dei messaggi, bensì farà una chiamata remota tutti gli altri client.
+
+<div style="text-align: center">
+    <p align="center" style="display: inline-block; width: 49%; vertical-align: middle;">
+        <img src="./docs/part-03/color-change.svg" alt="brush color change"/>
+    </p>
+    <p align="center" style="display: inline-block; width: 49%; vertical-align: middle">
+        <img src="./docs/part-03/mouse-move.svg" alt="mouse move"/>
+    </p>
+</div>
+
+
+
+### Join di un utente
+
+Un client, per poter partecipare alla sessione, deve conoscere un rifertimento ad un altro utente già connesso al sistema.
+In questo modo, può richiedere a quest'ultuimo l'istanza del *ModelService* della sessione, che consentirà di ottenere lo stato della griglia e la lista degli utenti connessi.
+Inoltre, il *ModelService* notificherà a tutti gli altri client la presenza del nuovo utente.
+
+<p align="center">
+    <img src="./docs/part-03/join-sequence.svg" alt="diagramma di sequenze di join"/>
+</p>
