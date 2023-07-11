@@ -4,7 +4,7 @@ import pcd.assignment03.ex2.pixelart.{Brush, BrushManager, PixelGrid, PixelGridV
 
 import scala.collection.concurrent.TrieMap
 
-class LocalInstance() extends RemoteObserver:
+class LocalInstance(val modelService: ModelService = ModelService()) extends RemoteObserver:
   val user: User = User()
   val brushManager: BrushManager = BrushManager()
   var others: TrieMap[String, (RemoteObserver, Brush)] = TrieMap[String, (RemoteObserver, Brush)]()
@@ -35,6 +35,8 @@ class LocalInstance() extends RemoteObserver:
     grid.set(x, y, color)
     view.refresh()
   }
+
+  def getModelService: ModelService = modelService
 
   def onUserExit(uuid: String): Unit = synchronized {
     val removedBrush = others.remove(uuid)

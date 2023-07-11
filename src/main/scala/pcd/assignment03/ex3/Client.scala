@@ -4,13 +4,28 @@ import java.awt.event.{WindowAdapter, WindowEvent}
 import java.rmi.registry.{LocateRegistry, Registry}
 import java.rmi.server.UnicastRemoteObject
 import scala.collection.concurrent.TrieMap
+import scala.io.StdIn
 
 object Client extends App:
-  private val localInstance = LocalInstance()
   val registry: Registry = LocateRegistry.getRegistry(null)
+
+  print("Other user UUID: ")
+  val remoteUUID = StdIn.readLine()
+  val model: ModelService =
+    if remoteUUID.nonEmpty then
+      registry.lookup(remoteUUID).asInstanceOf[RemoteObserver].getModelService
+    else
+      print("Session name: ")
+      val sessionName = StdIn.readLine()
+      if sessionName.nonEmpty then
+        registry.lookup(sessionName).asInstanceOf[ModelService]
+      else registry.lookup("modelService").asInstanceOf[ModelService]
+
+  private val localInstance = LocalInstance(model)
   private val stub = UnicastRemoteObject.exportObject(localInstance, 0).asInstanceOf[RemoteObserver]
   registry.rebind(localInstance.user.userId.toString, stub)
-  val model = registry.lookup("modelService").asInstanceOf[ModelService]
+
+  println(s"My UUID: ${localInstance.user.userId}")
 
   localInstance.others =
     scala.jdk.javaapi.CollectionConverters.asScala(
