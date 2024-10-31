@@ -1,5 +1,5 @@
 ThisBuild / scalaVersion := "3.3.0"
-val AkkaVersion = "2.8.2"
+val AkkaVersion = "2.8.8"
 
 libraryDependencies ++= Seq(
     "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
