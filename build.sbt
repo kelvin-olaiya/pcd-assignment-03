@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / scalaVersion := "3.6.3"
 val AkkaVersion = "2.8.2"
 
 libraryDependencies ++= Seq(
